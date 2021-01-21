@@ -1,0 +1,74 @@
+cs6900-01
+Project 01 - Test Results
+Ryan Miller
+w051rem
+Due 22 Jan 2021
+
+-----------------------------
+##INPUT##
+./proj01.sh
+
+##OUTPUT##
+Error: No Inputs Given!
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh -h
+
+##OUTPUT##
+---------
+Help Page
+---------
+Accepted Inputs: One or more space seperated integers
+Example Input: proj01.sh 1 2 3
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh -v
+
+##OUTPUT##
+------------
+Version Info
+------------
+proj01: v1.0
+Integer Sum/Average Calculator
+Made By Ryan Miller
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh 2 word 3 true
+
+##OUTPUT##
+Error: Non-Integer Inputs: word true
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh 2 4 6
+
+##OUTPUT##
+-Sum: 12
+-Average: 4.000
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh 5 3 3 4
+
+##OUTPUT##
+-Sum: 15
+-Average: 3.750
+-----------------------------
+
+-----------------------------
+##INPUT##
+./proj01.sh 12 15 1 0
+
+##OUTPUT##
+-Sum: 28
+-Average: 7.000
+-----------------------------
+
