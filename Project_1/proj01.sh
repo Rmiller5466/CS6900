@@ -17,31 +17,32 @@
 errorRed="$(tput bold)$(tput setaf 1)"
 boldWhite="$(tput setaf 7)$(tput bold)"
 clearCyan="$(tput sgr0)$(tput setaf 6)"
+clearFormat="$(tput sgr0)"
 
 # Validating that the program has been called correctly, if no inputs are provided, error
 
 totalItems=$#
 if [[ "$totalItems" == '0' ]]; then
-	echo "${errorRed}Error: No Inputs Given!" >&2; exit 
+	echo "${errorRed}Error: No Inputs Given!${clearFormat}" >&2; exit 
 fi
 
 # Regex definitions for input identification and verification
 
 regexInt='^[-]?[0-9]+$'
-regexHelp='^\?|-h|-help|help$'
-regexVersion='^-v|-version$'
+regexHelp='(-h|-help|help)\b'
+regexVersion='(-v|-version)\b'
 
 # Check to see if the program was given the help flag.  If so print help page
 
-if [[ $1 =~ $regexHelp ]]; then
-  	printf "${boldWhite} ---------\n Help Page\n ---------\n ${clearCyan}Accepted Inputs: One or more space seperated integers\n Example Input: proj01.sh 1 2 3\n"
+if [[ $1 =~ $regexHelp || $1 == '?' ]]; then
+  	printf "${boldWhite} ---------\n Help Page\n ---------\n ${clearCyan}Accepted Inputs: One or more space seperated integers\n Example Input: proj01.sh 1 2 3\n${clearFormat}"
 	exit
 fi
 
 # Check to see if the program was given the version flag.  If so print version page
 
 if [[ $1 =~ $regexVersion ]]; then
-  	printf "${boldWhite} ------------\n Version Info\n ------------\n${clearCyan} proj01: v1.0\n Integer Sum/Average Calculator\n Made By Ryan Miller\n"
+  	printf "${boldWhite} ------------\n Version Info\n ------------\n${clearCyan} proj01: v1.0\n Integer Sum/Average Calculator\n Made By Ryan Miller\n${clearFormat}"
 	exit
 fi
 
@@ -55,7 +56,7 @@ for i in "${@}"; do
 done
 
 if [[ "${#errorArr[@]}" != '0' ]]; then
-	echo "${errorRed}Error: Non-Integer Inputs: ${errorArr[@]}" >&2; exit 
+	echo "${errorRed}Error: Non-Integer Inputs: ${errorArr[@]}${clearFormat}" >&2; exit 
 fi
 
 # Loop through the given inputs and add them together, storing the results in the sum variable
@@ -72,5 +73,5 @@ average=$(echo "$sum / $#" | bc -l)
 
 # Print the results to the screen, rounding to three decimal places
 
-printf " ${boldWhite}-Sum:${clearCyan} $sum\n ${boldWhite}-Average:${clearCyan} %0.3f\n" $average
+printf " ${boldWhite}-Sum:${clearCyan} $sum\n ${boldWhite}-Average:${clearCyan} %0.3f\n${clearFormat}" $average
 
