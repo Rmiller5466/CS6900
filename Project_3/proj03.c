@@ -14,6 +14,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 //#define DEBUG
 
@@ -43,7 +44,7 @@ unsigned long* calMandP(int N ) {
   unsigned long M=0, P=0;
   
   // random variables
-  double x, y, rs;
+  double x, y, z, rs;
   int randomPnts;
 
    // Pick N random (x,y) points
@@ -51,19 +52,20 @@ unsigned long* calMandP(int N ) {
 
     x=randVar();
     y=randVar();
+    z=randVar();
 
     // radius squared
-    rs=x*x+y*y;
+    rs=x*x+y*y+z*z;
 
 #ifdef DEBUG
     // test random values in function
-    printf("%d x=%f y=%f rs=%f\n",randomPnts,x,y,rs);
+    printf("%d x=%f y=%f z=%f rs=%f\n",randomPnts,x,y,z,rs);
 #endif 
 
     if (rs<1){                   // or should it be rs<=1
       // Inside circle
       ++M;
-      if (x<rsq2 && y<rsq2){     // or should it be <=
+      if (x<rsq2 && y<rsq2 && z<rsq2){     // or should it be <=
 	// inside inner square
 	++P;
       }
@@ -95,6 +97,11 @@ int main (int argc, char *argv[]){
   // Results
   printf("M=%llu P=%llu\n",MnP[0],MnP[1]);
   
+
+  double pc=4*((double)MnP[0]/(double)N);
+  double ps=2*((double)MnP[0]/(double)MnP[1]);
+  printf("Pi1: %f Pi2: %f\n",pc,ps);
+
   return 0;
 }
 
