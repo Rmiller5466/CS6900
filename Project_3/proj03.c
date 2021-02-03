@@ -14,9 +14,9 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 
-#define DEBUG
+
+//#define DEBUG
 
 // DO NOT CHANGE THIS FUNCTION!!!!!
 // function to return a random variable between [0,1)
@@ -37,8 +37,8 @@ unsigned long* calMandP(int N ) {
   static unsigned long MnP[2];
 
   // Constant for small cube
-  // Reciprocal of sqrt(2) or 1/sqrt(2)
-  double rsq2=0.70710678118654752440;
+  // 1/sqrt(3)
+  double rsq3=0.57735026919;
 
   // initialize counters each time the function is called
   unsigned long M=0, P=0;
@@ -65,7 +65,7 @@ unsigned long* calMandP(int N ) {
     if (rs<1){                   // or should it be rs<=1
       // Inside circle
       ++M;
-      if (x<rsq2 && y<rsq2 && z<rsq2){     // or should it be <=
+      if (x<rsq3 && y<rsq3 && z<rsq3){     // or should it be <=
 	// inside inner square
 	++P;
       }
@@ -97,10 +97,10 @@ int main (int argc, char *argv[]){
   // Results
   printf("M=%llu P=%llu\n",MnP[0],MnP[1]);
   
-
-  // double pc=4*((double)MnP[0]/(double)N);
-  //double ps=2*((double)MnP[0]/(double)MnP[1]);
-  // printf("Pi1: %f Pi2: %f\n",pc,ps);
+  double sqrt3=1.73205080757;
+  double p1=(2.0*sqrt3)/(((double)MnP[0]/(double)MnP[1])*3.0);
+  double p2=(2.0*((double)MnP[0]/(double)N))/sqrt3;
+  printf("Pi1: %f Pi2: %f\n",p1,p2);
 
   return 0;
 }
