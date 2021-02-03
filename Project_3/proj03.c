@@ -37,8 +37,8 @@ unsigned long* calMandP(int N ) {
   static unsigned long MnP[2];
 
   // Constant for small cube
-  // ( sqrt(3) * sqrt(2) ) / 2
-  double rsq2=1.22474487139;
+  // Reciprocal of sqrt(2) or 1/sqrt(2)
+  double rsq2=0.70710678118654752440;
 
   // initialize counters each time the function is called
   unsigned long M=0, P=0;
