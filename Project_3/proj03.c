@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-//#define DEBUG
+#define DEBUG
 
 // DO NOT CHANGE THIS FUNCTION!!!!!
 // function to return a random variable between [0,1)
@@ -36,9 +36,9 @@ unsigned long* calMandP(int N ) {
   //Save the results in an integer array
   static unsigned long MnP[2];
 
-  // Constant for small square 
-  // Reciprocal of sqrt(2) or 1/sqrt(2)
-  double rsq2=0.70710678118654752440;
+  // Constant for small cube
+  // ( sqrt(3) * sqrt(2) ) / 2
+  double rsq2=1.22474487139;
 
   // initialize counters each time the function is called
   unsigned long M=0, P=0;
@@ -98,9 +98,9 @@ int main (int argc, char *argv[]){
   printf("M=%llu P=%llu\n",MnP[0],MnP[1]);
   
 
-  double pc=4*((double)MnP[0]/(double)N);
-  double ps=2*((double)MnP[0]/(double)MnP[1]);
-  printf("Pi1: %f Pi2: %f\n",pc,ps);
+  // double pc=4*((double)MnP[0]/(double)N);
+  //double ps=2*((double)MnP[0]/(double)MnP[1]);
+  // printf("Pi1: %f Pi2: %f\n",pc,ps);
 
   return 0;
 }
