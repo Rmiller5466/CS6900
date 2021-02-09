@@ -79,9 +79,23 @@ unsigned long* calMandP(int N ) {
 
 
 int main (int argc, char *argv[]){
+  MPI_Init(NULL, NULL);
+
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+  char processor_name[MPI_MAX_PROCESSOR_NAME];
+
+  int name_len;
+  MPI_Get_processor_name(processor_name, &name_len);
+
+
 
   // Use current time as seed for random generator 
-  srand(time(0)); 
+  srand(time(NULL)*(double)world_rank); 
   
   // For convenience I passed "N" on the command line
   // Not checking for valid input
@@ -95,16 +109,24 @@ int main (int argc, char *argv[]){
   MnP=calMandP(N);
   
   // Results
-  printf("M=%llu P=%llu\n",MnP[0],MnP[1]);
-  
+   
   double sqrt3=1.73205080757;
-  double p1=(2.0*sqrt3)/(((double)MnP[0]/(double)MnP[1])*3.0);
-  double p2=(2.0*((double)MnP[0]/(double)N))/sqrt3;
-  printf("Pi1: %f Pi2: %f\n",p1,p2);
+  double p1=6.0*((double)MnP[0]/(double)N);
+  // double p2 = 3.0*((double)MnP[0]/(double)MnP[1]);
+  double p2=(2.0*(((double)MnP[0]/(double)MnP[1])/sqrt3));
+  // double p1=(2.0*((double)MnP[0]/(double)N))/sqrt3;
+	     printf("Reporting From: Processor %s, Rank %d Of %d\nM=%llu P=%llu\nPi1: %f Pi2: %f\n",  processor_name, world_rank, world_size, MnP[0], MnP[1],p1,p2);
+  // printf(,p1,p2);
 
-  return 0;
+  MPI_Finalize();// Finalize the MPI environment.
 }
 
+// Get the number of processes
+// Get the rank of the process
+
+// Get the name of the processor 
+
+//printf("Hello world from processor %s, rank %d out of %d processors\n",  processor_name, world_rank,  world_size);
 
 
 
