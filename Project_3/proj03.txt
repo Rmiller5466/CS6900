@@ -1,0 +1,46 @@
+
+Program Information:
+Total Nodes: 4 Total Time: 0 N: 1000
+
+Epsilon: 0.000010
+Iterations: 120
+M = 205430 P = 79243
+Estimation of Pi (Cube:Sphere): 3.452610
+Estimation of Pi (Sphere:Cube): 2.993452
+Method 1 converged
+
+###########################
+
+Program Information:
+Total Nodes: 4 Total Time: 1 N: 100000
+
+Epsilon: 0.000010
+Iterations: 22
+M = 3632481 P = 1405518
+Estimation of Pi (Cube:Sphere): 3.459506
+Estimation of Pi (Sphere:Cube): 2.984262
+Method 2 converged
+
+###########################
+
+Program Information:
+Total Nodes: 8 Total Time: 0 N: 1000
+
+Epsilon: 0.000010
+Iterations: 22
+M = 84714 P = 32543
+Estimation of Pi (Cube:Sphere): 3.457714
+Estimation of Pi (Sphere:Cube): 3.005848
+Method 1 converged
+
+###########################
+
+Program Information:
+Total Nodes: 8 Total Time: 0 N: 100000
+
+Epsilon: 0.000010
+Iterations: 6
+M = 2018152 P = 780945
+Estimation of Pi (Cube:Sphere): 3.459679
+Estimation of Pi (Sphere:Cube): 2.984027
+Method 1 converged
