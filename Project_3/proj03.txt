@@ -1,24 +1,44 @@
-EXAMPLE OUTPUT:
+
+Running with 4 Processors
 
 Program Information:
-Total Processors: 4 Total Time: 0 N: 100000
+Total Processors: 4 Total Time: 0.046696 N: 100000
 
 Epsilon: .001
 Iterations: 4
-M = 518649 P = 200347
-Estimation of Pi (Cube:Sphere): 3.458540
-Estimation of Pi (Sphere:Cube): 2.988400
+M = 519315 P = 200826
+Estimation of Pi (Cube:Sphere): 3.462470
+Estimation of Pi (Sphere:Cube): 2.985406
 Method 2 converged
 
-BEST RESULTS:
+Program Information:
+Total Processors: 4 Total Time: 0.188964 N: 100000
 
-1)The best test runs were performed when using 8 cores with a N value of
-   100,000.  The smallest value of epsilon before problems began was around 1e-10. 
-   At this point the M/N calculation was taking 10 thousand or more iterations and 
-   giving estimations not even close to the desired 3.14. 
+Epsilon: .00001
+Iterations: 16
+M = 2596957 P = 1005264
+Estimation of Pi (Cube:Sphere): 3.462607
+Estimation of Pi (Sphere:Cube): 2.983005
+Method 1 converged
 
-2)All of my estimated values of Pi were right around the estimations listed in the 
-  example above. In most cases, the program would reach convergence within the first 
-  20 iterations.
-  In more extreme cases of smaller epsilon, it easily took thousands of iterations 
-  to converge.  
+Running with 8 Processors
+
+Program Information:
+Total Processors: 8 Total Time: 0.059724 N: 100000
+
+Epsilon: .001
+Iterations: 5
+M = 1612792 P = 623886
+Estimation of Pi (Cube:Sphere): 3.455369
+Estimation of Pi (Sphere:Cube): 2.984987
+Method 1 converged
+
+Program Information:
+Total Processors: 8 Total Time: 0.225120 N: 100000
+
+Epsilon: .00001
+Iterations: 20
+M = 7667674 P = 2965036
+Estimation of Pi (Cube:Sphere): 3.459101
+Estimation of Pi (Sphere:Cube): 2.986088
+Method 2 converged

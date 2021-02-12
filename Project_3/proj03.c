@@ -80,7 +80,7 @@ unsigned long* calMandP(int N ) {
 int main (int argc, char *argv[]){
   
   // Record the start time of the program
-  int start_time = time(NULL);
+  double total_time = 0.0;
 
   MPI_Init(NULL, NULL);
 
@@ -109,6 +109,7 @@ int main (int argc, char *argv[]){
   // MnP_temp is used to send and recieve data between ranks
   unsigned long MnP_temp[2] = {0};
   
+  total_time -= MPI_Wtime();
   //Execution path for rank 0
   if (world_rank == 0){
     
@@ -178,11 +179,10 @@ int main (int argc, char *argv[]){
     }
     
     // Out of while loop, compute total run time
-    int end_time = time(NULL);
-    int total_time = end_time - start_time;
+    total_time += MPI_Wtime();
     
     // Print out results and program information
-    printf("\nProgram Information:\nTotal Processors: %d Total Time: %d N: %d\n\n",world_size, total_time, N);
+    printf("\nProgram Information:\nTotal Processors: %d Total Time: %f N: %d\n\n",world_size, total_time, N);
     printf("Epsilon: %s\nIterations: %d\nM = %d P = %d\nEstimation of Pi (Cube:Sphere): %f\nEstimation of Pi (Sphere:Cube): %f\nMethod %d converged\n",
    	   b, current_runs, MnP_total[0], MnP_total[1], est_value1, est_value2, identifier);
     
