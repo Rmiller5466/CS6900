@@ -78,6 +78,8 @@ unsigned long* calMandP(int N ) {
 
 
 int main (int argc, char *argv[]){
+  
+  // Record the start time of the program
   int start_time = time(NULL);
 
   MPI_Init(NULL, NULL);
@@ -87,26 +89,30 @@ int main (int argc, char *argv[]){
   
   int world_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
-  char processor_name[MPI_MAX_PROCESSOR_NAME];
-
-  int name_len;
-  MPI_Get_processor_name(processor_name, &name_len);
   
+  // Setting the random seed for each rank
   srand(time(NULL)*(double)world_rank);
-  // For convenience I passed "N" on the command line
+  
+  // Values used for N and Epsilon are passed on the command line
   // Not checking for valid input
   char *a = argv[1];
   char *b = argv[2];
   int N = atoi(a);
   double E = atof(b);
+  
+  // Variable running is used as a method of controlling all the ranks
   int running = 1;
+  
   // The Max value of unsigned long is 18,446,744,073,709,551,615
   unsigned long* MnP;
+  
+  // MnP_temp is used to send and recieve data between ranks
   unsigned long MnP_temp[2] = {0};
   
+  //Execution path for rank 0
   if (world_rank == 0){
     
+    // Initialzation of variables 
     unsigned long MnP_total[2] = {0};
     double sqrt3 = 1.73205080757;
     double epsilon = E;
@@ -116,13 +122,23 @@ int main (int argc, char *argv[]){
     double cube2sphere = 0, sphere2cube = 0, est_value1 = 0, est_value2 = 0;
     int finished_1 = 0, finished_2 = 0, identifier = 0;
     MnP = calMandP(0);
-
+    
+    // While we have not performed the max amount of iterations & neither 
+    // computation has converged, continue running
     while ((current_runs < MAX_RUNS) && running == 1){
       
+      // Waiting for the other ranks to complete generation, then reducing the 
+      // results to be usable in rank 0
       MPI_Reduce(MnP,MnP_temp,2,MPI_UNSIGNED_LONG,MPI_SUM,0,MPI_COMM_WORLD);
       MnP_total[0] += MnP_temp[0];
       MnP_total[1] += MnP_temp[1];
       
+      //NOTE: This following section could be refactored, was made under the assumption that
+      // the program would continue until both converged.
+      
+      // Both sections complete appropriate computations on the data provided, and then determine
+      // if the estimation have changed by more than epsilon.  If it has not, we mark which formula 
+      // converged
       if (finished_1 == 0){
 	
 	cube2sphere=6.0*((double)MnP_total[0]/(double)(n_modifier * current_runs * N));
@@ -146,36 +162,47 @@ int main (int argc, char *argv[]){
 	}
       }
       
+      // If either formula converged, change the running variable to 0
       if (finished_1 == 1 || finished_2 == 1) {
 	running = 0;
       }
      
+      // Increase the count of iterations completed 
       current_runs += 1;
       if (current_runs >= MAX_RUNS) {
 	running = 0;
       }
       
+      // Broadcast to all ranks whether to continue running
       MPI_Bcast(&running, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
+    
+    // Out of while loop, compute total run time
     int end_time = time(NULL);
     int total_time = end_time - start_time;
     
-    
+    // Print out results and program information
     printf("\nProgram Information:\nTotal Processors: %d Total Time: %d N: %d\n\n",world_size, total_time, N);
     printf("Epsilon: %s\nIterations: %d\nM = %d P = %d\nEstimation of Pi (Cube:Sphere): %f\nEstimation of Pi (Sphere:Cube): %f\nMethod %d converged\n",
    	   b, current_runs, MnP_total[0], MnP_total[1], est_value1, est_value2, identifier);
     
     
   }else{
-   
+    // All other non-zero ranks
+    
     while( running == 1){
-        
+          
+      // Calculate and store the M and P values
       MnP=calMandP(N);
       
-      
+      // Reduce and send the results back to rank 0
       MPI_Reduce(MnP,MnP_temp,2,MPI_UNSIGNED_LONG,MPI_SUM,0,MPI_COMM_WORLD);
+      
+      // Determine if execution should continue
       MPI_Bcast(&running, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
   }
+  
+  // Finalize the MPI environment
   MPI_Finalize();
 }
