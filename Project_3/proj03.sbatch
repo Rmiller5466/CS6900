@@ -11,14 +11,14 @@ module purge
 ## Load the appropriate module
 module load openmpi-2.0/gcc
 
-# Run on a single Node
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 4 ./proj03.mpi 1000
 echo
-echo "###########################"
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 4 ./proj03.mpi 100000
+echo "Running with 4 Processors" 
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 4 ./proj03.mpi 100000 .001
+
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 4 ./proj03.mpi 100000 .00001
 echo
-echo "###########################"
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 8 ./proj03.mpi 1000
-echo
-echo "###########################"
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 8 ./proj03.mpi 100000
+echo "Running with 8 Processors"
+
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 8 ./proj03.mpi 100000 .001
+
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 8 ./proj03.mpi 100000 .00001

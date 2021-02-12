@@ -13,7 +13,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <math.h>
 
 //#define DEBUG
 
@@ -94,46 +94,34 @@ int main (int argc, char *argv[]){
   MPI_Get_processor_name(processor_name, &name_len);
   
   srand(time(NULL)*(double)world_rank);
-  // printf("Starting... %d\n", world_rank);
   // For convenience I passed "N" on the command line
   // Not checking for valid input
   char *a = argv[1];
+  char *b = argv[2];
   int N = atoi(a);
+  double E = atof(b);
   int running = 1;
   // The Max value of unsigned long is 18,446,744,073,709,551,615
   unsigned long* MnP;
-  //unsigned long MnP_total[2];
   unsigned long MnP_temp[2] = {0};
-  //unsigned long MnP_total[2];   // Store in vector M=MnP[0] and P=MnP[1]
-  //printf("before split... %d\n", world_rank);
-
   
   if (world_rank == 0){
     
     unsigned long MnP_total[2] = {0};
-    double sqrt3=1.73205080757;
-    double epsilon=0.00001;
+    double sqrt3 = 1.73205080757;
+    double epsilon = E;
     int n_modifier = world_size - 1;
-    int MAX_RUNS=100000;
+    int MAX_RUNS = 100000;
     int current_runs=1;
     double cube2sphere = 0, sphere2cube = 0, est_value1 = 0, est_value2 = 0;
     int finished_1 = 0, finished_2 = 0, identifier = 0;
     MnP = calMandP(0);
-    //printf("Program Information:\nTotal Nodes: %d\nApproximate Run Time:\n\n", world_size);
-    // printf("Reporting final results from rank 0...\n");
-    //printf("Epsilon: %d\nIterations: %d\nM = %d P = %d\nEstimation of Pi (Cube:Sphere): %d\nEstimation of Pi (Sphere:Cube): %d\nMethod %d converged\n",
-    //	   epsilon, current_runs, M_total, P_total, est_value1, est_value2, identifier);
-    //printf("FIRST DRAFT");
-    
-    //printf("Initialized 0\n");
+
     while ((current_runs < MAX_RUNS) && running == 1){
       
-      //printf("Before Reduce: MT - %d, PT %d, MTO - %d, PTO - %d\n",MnP_temp[0],MnP_temp[1],MnP_total[0],MnP_total[1]);
       MPI_Reduce(MnP,MnP_temp,2,MPI_UNSIGNED_LONG,MPI_SUM,0,MPI_COMM_WORLD);
-      //printf("M Recieved: %d P Recieved: %d\n", MnP_temp[0], MnP_temp[1]);
       MnP_total[0] += MnP_temp[0];
       MnP_total[1] += MnP_temp[1];
-      //printf("M Total: %d P Total: %d\n", MnP_total[0], MnP_total[1]);
       
       if (finished_1 == 0){
 	
@@ -162,7 +150,6 @@ int main (int argc, char *argv[]){
 	running = 0;
       }
      
-      //printf("Finished Math\n");
       current_runs += 1;
       if (current_runs >= MAX_RUNS) {
 	running = 0;
@@ -174,29 +161,21 @@ int main (int argc, char *argv[]){
     int total_time = end_time - start_time;
     
     
-    printf("\nProgram Information:\nTotal Nodes: %d Total Time: %d N: %d\n\n",world_size, total_time, N);
-    printf("Epsilon: %f\nIterations: %d\nM = %d P = %d\nEstimation of Pi (Cube:Sphere): %f\nEstimation of Pi (Sphere:Cube): %f\nMethod %d converged\n",
-   	   epsilon, current_runs, MnP_total[0], MnP_total[1], est_value1, est_value2, identifier);
+    printf("\nProgram Information:\nTotal Processors: %d Total Time: %d N: %d\n\n",world_size, total_time, N);
+    printf("Epsilon: %s\nIterations: %d\nM = %d P = %d\nEstimation of Pi (Cube:Sphere): %f\nEstimation of Pi (Sphere:Cube): %f\nMethod %d converged\n",
+   	   b, current_runs, MnP_total[0], MnP_total[1], est_value1, est_value2, identifier);
     
     
   }else{
    
-    // printf("Inside... %d\n", world_rank);
     while( running == 1){
         
-      //TODO: Set up M and P and return to rank 0
       MnP=calMandP(N);
       
       
-      //printf("Reduce... %d\n", world_rank);
       MPI_Reduce(MnP,MnP_temp,2,MPI_UNSIGNED_LONG,MPI_SUM,0,MPI_COMM_WORLD);
-      //printf("Broadcast... %d\n", world_rank);
       MPI_Bcast(&running, 1, MPI_INT, 0, MPI_COMM_WORLD);
-      //printf("Repeat... %d\n", world_rank);
     }
   }
   MPI_Finalize();
-  //USE LATER:
-  //  printf("Reporting From: Processor %s, Rank %d Of %d\nM=%llu P=%llu\nPi1: %f Pi2: %f\n",  processor_name, world_rank, world_size, MnP[0], MnP[1],p1,p2);
-  
 }
