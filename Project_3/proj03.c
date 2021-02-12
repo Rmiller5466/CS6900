@@ -46,7 +46,7 @@ unsigned long* calMandP(int N ) {
   double x, y, z, rs;
   int randomPnts;
 
-   // Pick N random (x,y) points
+   // Pick N random (x,y, z) points
   for(randomPnts = 0; randomPnts < N; ++randomPnts) {
 
     x=randVar();

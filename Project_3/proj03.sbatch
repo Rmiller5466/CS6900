@@ -11,6 +11,8 @@ module purge
 ## Load the appropriate module
 module load openmpi-2.0/gcc
 
+# The first argument to the program is N and the second number represents Epsilon
+
 echo
 echo "Running with 4 Processors" 
 mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 4 ./proj03.mpi 100000 .001
