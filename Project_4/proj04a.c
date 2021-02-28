@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -8,10 +7,36 @@ float dot(float *v1, float *v2, int N) {
   int i;
   float sum=0.0;
   for (i = 0; i < N; i++) {
+    float temp = v1[i]*v2[i];
+    printf("i value: %d, %f ",i,temp);
     sum += v1[i]*v2[i];
   }
+  printf("\n\n");
   return sum;
 }
+
+float* calcMatrix(float **matrix, int l1, int l2){
+ static float sums[2] = {0};
+ int i,j;
+
+ for (i = 0; i < l2; i++){
+   for (j = 0; j < l1; j++){
+     //printf("%f ", matrix[i][j]);
+     if (j == i){
+       //printf("%f\n", matrix[i][j]);
+       sums[1] += matrix[i][j];
+     }else{
+       sums[0] += matrix[i][j];
+     }
+      
+   }
+   printf("\n");
+ }
+
+return sums;
+}
+
+ 
 
 
 int main(int argc, char** argv) {
@@ -42,9 +67,11 @@ int main(int argc, char** argv) {
   dy = (2.0*pi)/L2;
   norm1 = sqrt(2.0/L1);
   norm2 = sqrt(2.0/L2);
-  a = pi*(Ap/180.0);
-  b = pi*(Bp/180.0);
-
+  a = pi * Ap / 180.0;
+  b = pi * Bp /180.0;
+  
+  printf("Pi: %f Dx: %f Dy: %f norm1: %f norm2: %f a: %f b: %f\n", pi, dx, dy, norm1, norm2, a, b);
+  
   float *v1 = (float *)malloc(sizeof(float) * L1);
   assert(v1 != NULL);
   float *v2 = (float *)malloc(sizeof(float) * L1);
@@ -52,29 +79,67 @@ int main(int argc, char** argv) {
   float *v3 = (float *)malloc(sizeof(float) * L2);
   assert(v3 != NULL);
   
-  int i;
+  int i, j;
   float Xi, Yi;
-  
+
   for (i = 0; i < L1; i++) {
-    Xi = Xi+dx;
-    Yi = Yi+dy;
-    
+    Xi = dx/2.0 + i * dx;
     v1[i] = norm1*cos((A*Xi)+a);
     v2[i] = norm1*sin((B*Xi)+b);
-    // v3[i] = norm2*cos((B*Yi)+b);
   }
 
-  // For loop L2
+  for (i = 0; i < L2; i++){
+    Yi = dy/2.0 + i * dy;
+    v3[i] = norm2*cos((B*Yi)+b);
+  }
+
+  printf("V1: ");
+  for (i = 0; i < L1; i++) {
+    printf("%f ",v1[i]);
+  }
+  printf("\n");
+
+ printf("V2: ");
+  for (i = 0; i < L1; i++) {
+    printf("%f ",v2[i]);
+  }
+  printf("\n");
+
+ printf("V3: ");
+  for (i = 0; i < L2; i++) {
+    printf("%f ",v3[i]);
+  }
+  printf("\n");
 
   float dotSum;
   dotSum = dot(v1,v2,L1);
 
-  printf("L1: %d\n",L1);
+  float *Matrix[L2];
+  assert(Matrix != NULL);
+
+  for (i = 0; i < L2; i++){
+    Matrix[i] = (float *)malloc(sizeof(float) * L1);
+    assert(Matrix[i] != NULL);
+  }
+
+  for (i = 0; i < L2; i++){
+    for (j = 0; j < L1; j++){
+      Matrix[i][j] = v3[i] * v1[j];
+      // printf("v1 J-%d VALUE: %f\nv3 I-%d VALUE: %f\nMATRIX-I: %d J: %d VALUE:%f\n\n",j,v1[j],i,v3[i],i,j,Matrix[i][j]);
+    }
+  }
+
+  float *matrixTotals = calcMatrix(Matrix, L1, L2);
+
+  printf("L1: %d L2:%d\n",L1,L2);
   printf("The dot product is %f\n",dotSum);
-
-
+  printf("Matrix Total: %f Matrix Diagonal Total: %f",matrixTotals[0], matrixTotals[1]);
+  
   // Clean up Memory
   free(v1);
   free(v2);
-
+  free(v3);
+  for (i = 0; i < L2; i++){
+    free(Matrix[i]);
+  }
 }
