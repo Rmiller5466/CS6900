@@ -1,0 +1,6 @@
+
+Arguments: 10^9 0 1 -1 45 45
+
+L1: 1000000000 L2:0
+The dot product is 1.000000
+Matrix Total: 0.000000 Matrix Diagonal Total: 0.000000
