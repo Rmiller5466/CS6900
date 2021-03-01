@@ -5,6 +5,15 @@
 #SBATCH --job-name=proj04b
 #SBATCH --output=proj04b.txt
 
+# cs6900
+# Project 04b
+# Ryan Miller
+# w051rem
+# Due 1 March 2021
+# System = bender
+# Job Control File = proj04b.sbatch
+# Results file     = proj04b.txt
+
 ## First make sure all other modules are not loaded
 module purge
 
