@@ -258,8 +258,8 @@ int main(int argc, char** argv) {
       MPI_Reduce(localMatrixTotals,matrixTotalsRecv,2,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
    
       printf("L1: %d L2:%d A: %d B: %d Ap: %d Bp: %d\n",L1, L2, A, B, Ap, Bp);
-      printf("Dot Product of V1:V2 was: %f\n",dotSumRecv);
-      printf("Matrix Total (Non-Diagonal): %f, Matrix Diagonal Total: %f\n\n",matrixTotalsRecv[0], matrixTotalsRecv[1]);
+      printf("Dot Product of V1:V2 was: %.30f\n",dotSumRecv);
+      printf("Matrix Total (Non-Diagonal): %.30f, Matrix Diagonal Total: %.30f\n\n",matrixTotalsRecv[0], matrixTotalsRecv[1]);
    
       MPI_Barrier(MPI_COMM_WORLD);
   
