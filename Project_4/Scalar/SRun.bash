@@ -1,4 +1,4 @@
 #!/usr/bin/bash
 
-./compileScalar.bash
+../../Extras/compileScalar.bash proj04a
 sbatch proj04a.sbatch

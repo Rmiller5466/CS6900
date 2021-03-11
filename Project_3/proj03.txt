@@ -2,43 +2,43 @@
 Running with 4 Processors
 
 Program Information:
-Total Processors: 4 Total Time: 0.046696 N: 100000
+Total Processors: 4 Total Time: 0.085656 N: 100000
 
 Epsilon: .001
-Iterations: 4
-M = 519315 P = 200826
-Estimation of Pi (Cube:Sphere): 3.462470
-Estimation of Pi (Sphere:Cube): 2.985406
+Iterations: 7
+M = 1037211 P = 401810
+Estimation of Pi (Cube:Sphere): 3.458276
+Estimation of Pi (Sphere:Cube): 2.980535
 Method 2 converged
 
 Program Information:
-Total Processors: 4 Total Time: 0.188964 N: 100000
+Total Processors: 4 Total Time: 0.271533 N: 100000
 
 Epsilon: .00001
-Iterations: 16
-M = 2596957 P = 1005264
-Estimation of Pi (Cube:Sphere): 3.462607
-Estimation of Pi (Sphere:Cube): 2.983005
-Method 1 converged
+Iterations: 25
+M = 4149674 P = 1605185
+Estimation of Pi (Cube:Sphere): 3.458062
+Estimation of Pi (Sphere:Cube): 2.985101
+Method 2 converged
 
 Running with 8 Processors
 
 Program Information:
-Total Processors: 8 Total Time: 0.059724 N: 100000
+Total Processors: 8 Total Time: 0.046122 N: 100000
 
 Epsilon: .001
-Iterations: 5
-M = 1612792 P = 623886
-Estimation of Pi (Cube:Sphere): 3.455369
-Estimation of Pi (Sphere:Cube): 2.984987
+Iterations: 4
+M = 1210150 P = 468258
+Estimation of Pi (Cube:Sphere): 3.457543
+Estimation of Pi (Sphere:Cube): 2.984169
 Method 1 converged
 
 Program Information:
-Total Processors: 8 Total Time: 0.225120 N: 100000
+Total Processors: 8 Total Time: 0.139785 N: 100000
 
 Epsilon: .00001
-Iterations: 20
-M = 7667674 P = 2965036
-Estimation of Pi (Cube:Sphere): 3.459101
-Estimation of Pi (Sphere:Cube): 2.986088
-Method 2 converged
+Iterations: 12
+M = 4440090 P = 1718473
+Estimation of Pi (Cube:Sphere): 3.459819
+Estimation of Pi (Sphere:Cube): 2.983448
+Method 1 converged

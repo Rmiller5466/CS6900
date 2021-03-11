@@ -14,5 +14,5 @@
 # Job Control File = proj04a.sbatch
 # Results file     = proj04a.txt
 
-./proj04a.exe 20 20 1 1 135 135
+./proj04a.exe 20 20 1 -1 135 135
 
