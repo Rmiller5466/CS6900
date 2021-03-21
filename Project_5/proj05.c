@@ -17,6 +17,9 @@
 #include <mpi.h>
 #include <string.h>
 
+#define DEBUG_PRINT_MAT
+#define DEBUG_PRINT_RECV
+#define DEBUG_INPUTS
 void printVec(double* vec, int N){
   int i;
 
@@ -29,15 +32,18 @@ void printVec(double* vec, int N){
   }
 }
 
-void printMat(double** mat, int N, int M){
+void printMat(double** mat, int local_N, int N, int M){
   int i,j;
 
-  for (i = 0; i < N; i++) {
-    for (j = 0; j < M; j++) {
-      if (j == (M - 1)){
-	printf("%.3f\n", mat[i][j]);
+  for (i = 0; i < local_N; i++) {
+    for (j = 0; j < N+M; j++) {
+      if (j == (N+M - 1)){
+  	printf("%.3f\n", mat[i][j]);
       }else{
-	printf("%.3f ", mat[i][j]);
+  	if (j == N){
+  	  printf(": ");
+  	}
+  	printf("%.3f ", mat[i][j]);
       }
     }
   }
@@ -45,7 +51,7 @@ void printMat(double** mat, int N, int M){
 
 void createMatrix(int N, int N_global, double** mspace, char* flag, char* filename, int rank, int ncpu){ 
 
-  int i, j; // k;
+  int i, j; 
   double sum; 
   int offset = rank;
 
@@ -62,7 +68,7 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
 	if ( offset == j) {
 	  mspace[i][j] =  offset + 1;
 	}else{
-	  mspace[i][j] = 3.141;
+	  mspace[i][j] = 0;
 	}
       }
     }
@@ -117,13 +123,13 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
   }
 }
 
-void createRefMatrix(int N, int M,  double** ref, char* flag, char* filename, int rank, int ncpu){ 
+void createRefMatrix(int l_n, int N, int M,  double** ref, char* flag, char* filename, int rank, int ncpu){ 
   int i, j, lines;
   int offset = rank;
-	
+
 
   if (strcmp(flag, "-R") == 0) {
-    for (i = 0; i < N; i++) {
+    for (i = 0; i < l_n; i++) {
       for (j = 0; j < M; j++) {
 	ref[i][j] = (double)(rand() % 100);  
       }
@@ -183,20 +189,114 @@ void createRefMatrix(int N, int M,  double** ref, char* flag, char* filename, in
   
 }
 
-void generateY(int N, int M, double** mspace, double** ref){
-  int i, j, k;
-  double sum;
+int retreiveDimension(char* fileName){
+  FILE* fp;
+  char tmp[64];
+  int rtn = 0;
   
-  for (k = 0; k < M; k++){
-    for (i = 0; i < N; i++){
-      sum = 0;
-      for (j = 0; j < N; j++){
-  	sum += mspace[i][j] * ref[i][k];
-      }
-      mspace[i][N+k] = sum;
+  fp = fopen(fileName, "r");
+  if (fp == NULL){
+    printf("Emergency Abort: File Not Found!\n");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+    exit(1);
+  } 
+  fgets(tmp, sizeof(tmp), fp);
+  rtn = atoi(tmp);
+  fclose(fp);
+
+  return rtn;
+}
+
+void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** ref, int maxR, double* global, int rank, int ncpu){
+  int i, j, k, passes;
+  int myNext, myLast, origin;
+  int target[2] = {0, 0};
+
+  myNext = rank + 1;
+  myLast = rank - 1;
+  origin = rank;
+
+  if (rank == ncpu - 1) myNext = 0;
+  if (rank == 0) myLast = ncpu - 1;
+  int size = (maxR * M) + 1;
+  printf("MaxR: %d M: %d\n",maxR, M);
+  double* tempRef =  (double*)malloc(size * sizeof(double*));
+  int tempSize = 0;
+  
+  tempRef[0] = (double)origin;
+  
+  for (i = 0; i < local_N; i++){
+    for (j = 0; j < M; j++){
+      tempRef[tempSize+1] = ref[i][j];
+      tempSize++;
     }
   }
+  
+  for ( passes = 0; passes < ncpu; passes++){
+
+    for (k = 0; k < M; k++){
+      target[1] = tempRef[0];
+      target[0] = 0;
+
+      for (i = 0; i < local_N; i++){
+    	for (j = 0; j < total_N; j++){
+	  if (i == target[0] && j == target[1]){
+	    mspace[i][total_N + k] += mspace[i][j] * tempRef[(M * i + k) + 1];
+	    target[0]++;
+	    target[1] = tempRef[0] + (i+1) * ncpu;
+	  }
+    	}
+      }
+    }
+
+#ifdef DEBUG_PRINT_RECV
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for (i = 0; i < ncpu; i++){
+    
+      MPI_Barrier(MPI_COMM_WORLD);
+    
+      if( rank == i) {
+	printf("Rank: %d :: ", rank);
+	printVec(tempRef, size);
+      }
+      
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+   
+  
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+    // mspace[i][N+k] += mspace[i][j] * ref[M * i + k];
+    MPI_Send(tempRef, size, MPI_DOUBLE, myNext, 0, MPI_COMM_WORLD);
+    MPI_Recv(tempRef, size, MPI_DOUBLE, myLast, 0, MPI_COMM_WORLD,
+             MPI_STATUS_IGNORE);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    // printf("Moving on from pass: %d\n", passes);
+
+  }
+  
+//   printf("Rank %d has the value of %d!!\n",inrank, myVal);
+  
+  free(tempRef);
 }
+
+/* void generateY(int N, int M, double** mspace, double** ref){ */
+/*   int i, j, k; */
+/*   double sum; */
+  
+/*   for (k = 0; k < M; k++){ */
+/*     for (i = 0; i < N; i++){ */
+/*       sum = 0; */
+/*       for (j = 0; j < N; j++){ */
+/*   	sum += mspace[i][j] * ref[i][k]; */
+/*       } */
+/*       mspace[i][N+k] = sum; */
+/*     } */
+/*   } */
+/* } */
 
 int main(int argc, char** argv) {
 
@@ -219,120 +319,116 @@ int main(int argc, char** argv) {
     MPI_Abort(MPI_COMM_WORLD, 1);
     exit(1);
   }
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   char* matFlag;
   char* refFlag;
   char* fileNameMat;
   char* fileNameRef;
-  int n = 0, m = 0;
-  
+  int NxM[2] = {0,0};
+
   matFlag = argv[1];
   fileNameMat = argv[2];
 
   if (strcmp(matFlag, "-f") == 0){
-    FILE* fp;
-    char tmp[64];
-
-    fp = fopen(fileNameMat, "r");
-    if (fp == NULL){
-      printf("Emergency Abort: File Not Found!\n");
-      MPI_Abort(MPI_COMM_WORLD, 1);
-      exit(1);
-    } 
-    fgets(tmp, sizeof(tmp), fp);
-    n = atoi(tmp);
-    fclose(fp);
+    NxM[0] = retreiveDimension(fileNameMat);
   }else{
-    n = atoi(argv[2]);
+    NxM[0] = atoi(argv[2]);
   }
   
   refFlag = argv[3];
   fileNameRef = argv[4];
     
   if (strcmp(refFlag, "-F") == 0){
-     FILE* fp;
-     char tmp[64];
-    fp = fopen(fileNameRef, "r");
-    if (fp == NULL){
-      printf("Emergency Abort: File Not Found!\n");
-      MPI_Abort(MPI_COMM_WORLD, 1);
-      exit(1);
-    } 
-    fgets(tmp, sizeof(tmp), fp);
-    m = atoi(tmp);
-    
-    fclose(fp);
-
+    NxM[1] = retreiveDimension(fileNameRef);
   }else{
-    m = atoi(argv[4]);
+    NxM[1] = atoi(argv[4]);
   }
 
-  printf("Inputs:  Flag1: %s n: %d fileMat: %s Flag2: %s m: %d fileRef: %s\n", matFlag, n, fileNameMat, refFlag, m, fileNameRef);
-
+#ifdef DEBUG_INPUTS
+  printf("Inputs:  Flag1: %s n: %d fileMat: %s Flag2: %s m: %d fileRef: %s\n", matFlag, NxM[0], fileNameMat, refFlag,  NxM[1], fileNameRef);
+#endif
+  
   // Calculates which processor has what part of the global elements
-  int local_n, R;
-  local_n= (int)(n/ncpu);   // All processors have at least this many rows
-  R = (n%ncpu);       // Remainder of above calculation
-  if (rank<R) {
-    ++local_n;             // First R processors have one more element
+  int local_n, tmp_n, biggest_n, R, i, j;
+
+  double all_n[ncpu];
+  
+  for (i = 0; i < ncpu; i++){
+    tmp_n= (int)( NxM[0]/ncpu);   // All processors have at least this many rows
+    R = ( NxM[0]%ncpu);       // Remainder of above calculation
+    if (i<R) {
+      ++tmp_n;             // First R processors have one more element
+    }
+    all_n[i] = tmp_n;
   }
 
+  local_n = all_n[rank];
+  
+  if (NxM[0] == ncpu){
+    biggest_n = ((int)(NxM[0]/ncpu));
+  }else{
+    biggest_n = ((int)(NxM[0]/ncpu)) + 1;
+  }
+  
   double** A = (double**)malloc(local_n * sizeof(double*));
   double** r = (double**)malloc(local_n * sizeof(double*));
   double** x = (double**)malloc(local_n * sizeof(double*));
-  int i, j;
-
+  
   for (i = 0; i < local_n; i++){
-    A[i] = (double *)malloc(sizeof(double) * (n + m));
-    r[i] = (double *)malloc(sizeof(double) * m);
-    x[i] = (double *)malloc(sizeof(double) * m);
+    A[i] = (double *)malloc(sizeof(double) * (NxM[0] + NxM[1]));
+    r[i] = (double *)malloc(sizeof(double) * NxM[1]);
+    x[i] = (double *)malloc(sizeof(double) * NxM[1]);
     assert(A[i] != NULL);
     assert(r[i] != NULL);
     assert(x[i] != NULL);
   }
 
-  /* for (i = 0; i < local_n; i++) { */
-  /*   for (j = 0; j < m; j++){ */
-  /*     r[i][j] = (double) (rand()%15); */
+
+  for (i = 0; i < local_n; i++) {
+    for (j = 0; j < NxM[1]; j++){
+      A[i][NxM[0] + j] = 0;
+    }
+  }
+  
+
+  createMatrix(local_n, NxM[0], A, matFlag, fileNameMat, rank, ncpu);
+  createRefMatrix(local_n, NxM[0], NxM[1], r, refFlag, fileNameRef, rank, ncpu);
+  matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, all_n, rank, ncpu);
+ 
+  /* for (k = 0; k < M; k++){ */
+  /*   for (i = 0; i < N; i++){ */
+  /*     sum = 0; */
+  /*     for (j = 0; j < N; j++){ */
+  /* 	sum += mspace[i][j] * ref[i][k]; */
+  /*     } */
+  /*     mspace[i][N+k] = sum; */
   /*   } */
   /* } */
 
-  createMatrix(local_n, n, A, matFlag, fileNameMat, rank, ncpu);
-  createRefMatrix(n, m, r, refFlag, fileNameRef, rank, ncpu);
-
+  #ifdef DEBUG_PRINT_MAT
+  
   MPI_Barrier(MPI_COMM_WORLD);
+
+  for (i = 0; i < ncpu; i++){
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    if( rank == i) {
+      printf("Rank %d's matrix:\n", rank);
+      printMat(A, local_n, NxM[0], NxM[1]);
+      printf("Reference Matrix: \n");
+      printMat(r, local_n, NxM[1], 0);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
    
-  if( rank == 0) {
-    
-  printf("Rank %d's matrix:\n", rank);
-  printMat(A, local_n, n+m);
-  printMat(r, local_n, m);
-  }
-
+  
   MPI_Barrier(MPI_COMM_WORLD);
-   
-  if( rank == 1) {
-    
-  printf("Rank %d's matrix:\n", rank);
-  printMat(A, local_n, n+m);
-  printMat(r, local_n, m);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  if( rank == 2) {
-    
-  printf("Rank %d's matrix:\n", rank);
-  printMat(A, local_n, n+m);
-  printMat(r, local_n, m);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  //printf("Rank %d's matrix:\n", rank);
-  //printMat(A, local_n, n+m);
-  /* printf("Rank %d's reference:\n", rank); */
+  
+  #endif
   
   /* generateY(n, m, A, r); */
   /* printf("Rank %d's Full Matrix:\n", rank); */
