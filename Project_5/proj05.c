@@ -18,8 +18,9 @@
 #include <string.h>
 
 #define DEBUG_PRINT_MAT
-#define DEBUG_PRINT_RECV
-#define DEBUG_INPUTS
+//#define DEBUG_PRINT_RECV
+//#define DEBUG_INPUTS
+
 void printVec(double* vec, int N){
   int i;
 
@@ -58,7 +59,7 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
   if (strcmp(flag, "-r") == 0) {
     for (i = 0; i < N; i++) {
       for (j = 0; j < N_global; j++) {
-	mspace[i][j] = (double)(rand() % 100);  
+	mspace[i][j] = (double)(rand() % 525);  
       }
     }
   }else if (strcmp(flag, "-d") == 0){
@@ -104,6 +105,11 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
     num = strtok(st, " ");
     for (i = 0; i < N_global; i++) { 
       for (j = 0; j < N_global; j++) {
+	if (num == NULL){
+	  printf("Emergency Abort: Incorrect File Format!\n");
+	  MPI_Abort(MPI_COMM_WORLD, 1);
+	  exit(1);
+	}
 	if (i == offset){
 	  mspace[counter][j] = atof(num);	
 	}
@@ -131,7 +137,7 @@ void createRefMatrix(int l_n, int N, int M,  double** ref, char* flag, char* fil
   if (strcmp(flag, "-R") == 0) {
     for (i = 0; i < l_n; i++) {
       for (j = 0; j < M; j++) {
-	ref[i][j] = (double)(rand() % 100);  
+	ref[i][j] = (double)(rand() % 525);  
       }
     }
   }else if(strcmp(flag, "-F") == 0) {
@@ -268,35 +274,105 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    // mspace[i][N+k] += mspace[i][j] * ref[M * i + k];
     MPI_Send(tempRef, size, MPI_DOUBLE, myNext, 0, MPI_COMM_WORLD);
     MPI_Recv(tempRef, size, MPI_DOUBLE, myLast, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    // printf("Moving on from pass: %d\n", passes);
-
   }
-  
-//   printf("Rank %d has the value of %d!!\n",inrank, myVal);
   
   free(tempRef);
 }
 
-/* void generateY(int N, int M, double** mspace, double** ref){ */
-/*   int i, j, k; */
-/*   double sum; */
+void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int rank, int ncpu){
+  int i;
+  int max_Local_Index, maxRank;
+  int currentRank, current_Local_Index;
+  double* temp;
+  int size = total_N + M;
+
+  struct { 
+    double value; 
+    int   index; 
+  } localMax, globalMax; 
+
+ 
+  localMax.value = 0; 
+  localMax.index = 0; 
+  for (i=0; i < local_N; i++){ 
+    if (rank + ncpu * i >= currentCol){
+      if (fabs(localMax.value) < fabs(mat[i][currentCol])) { 
+	localMax.value = mat[i][currentCol]; 
+	localMax.index = i; 
+      } 
+    }
+  }
   
-/*   for (k = 0; k < M; k++){ */
-/*     for (i = 0; i < N; i++){ */
-/*       sum = 0; */
-/*       for (j = 0; j < N; j++){ */
-/*   	sum += mspace[i][j] * ref[i][k]; */
-/*       } */
-/*       mspace[i][N+k] = sum; */
-/*     } */
-/*   } */
-/* } */
+  localMax.index = rank + ncpu * localMax.index; 
+  MPI_Reduce(&localMax, &globalMax, 1, MPI_DOUBLE_INT, MPI_MAXLOC, 0, MPI_COMM_WORLD );
+  MPI_Bcast(&globalMax, 1, MPI_DOUBLE_INT, 0, MPI_COMM_WORLD);
+
+
+  maxRank = globalMax.index % ncpu;
+  max_Local_Index = globalMax.index / ncpu;
+
+  currentRank = currentCol % ncpu;
+  current_Local_Index = currentCol / ncpu;
+
+  
+  if (currentRank != maxRank){
+    
+    double* tempRow;
+    
+    if (rank == currentRank){
+      
+      tempRow = mat[current_Local_Index];
+      
+      MPI_Send(tempRow, size, MPI_DOUBLE, maxRank, 0, MPI_COMM_WORLD);
+      MPI_Recv(tempRow, size, MPI_DOUBLE, maxRank, 0, MPI_COMM_WORLD,
+    	       MPI_STATUS_IGNORE);
+      
+      mat[current_Local_Index] = tempRow;
+    }
+
+    if (rank == maxRank){
+
+      tempRow = mat[max_Local_Index];
+      MPI_Send(tempRow, size, MPI_DOUBLE, currentRank, 0, MPI_COMM_WORLD);
+      MPI_Recv(tempRow, size, MPI_DOUBLE, currentRank, 0, MPI_COMM_WORLD,
+    	       MPI_STATUS_IGNORE);
+      mat[max_Local_Index] = tempRow;
+    }
+  }else if (currentRank == maxRank && rank == maxRank && max_Local_Index != current_Local_Index){
+
+     double* tempRow;
+     tempRow = mat[current_Local_Index];
+      mat[current_Local_Index] = mat[max_Local_Index];
+      mat[max_Local_Index] = tempRow;
+   
+
+  } 
+  /* if (rank == 0) {  */
+  /*   printf("Pivot Col: %d, Maxval=%f maxrank=%d maxindexG=%d maxindexL=%d\n",currentCol,maxVal,maxRank,max_Global_Index, max_Local_Index); */
+  /*   printf("Pivot Col: %d, currank=%d curindexG=%d curindexL=%d\n",currentCol,currentRank,current_Global_Index, current_Local_Index); */
+
+  /* } */
+}
+
+void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
+  int base, row, col;
+  double cancelVal;
+
+  for (base = 0; base < total_N-1; base++) {
+    //SWAP HIGHEST
+    pivot(mat, local_N, total_N, M, base, rank, ncpu);
+
+    /* for (row = base + 1; row < N; row++){ */
+    /*   cancelVal = mat[row][base]/mat[base][base]; */
+    /*   for (col = 0; col < N+1; col++){ */
+    /* 	mat[row][col] = mat[row][col] + (-1 * cancelVal  * mat[base][col]); */
+    /*   } */
+    /* } */
+  }
+}
 
 int main(int argc, char** argv) {
 
@@ -306,8 +382,8 @@ int main(int argc, char** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &ncpu);
 
-  srand(time(NULL)*(double)rank);
-  
+  srand(time(NULL)*(double)(rank+1));
+
   if (rank == 0 && argc != 5) {
     fprintf(stderr, "Incorrect number of Inputs!\n");
     fprintf(stderr, "Usage: proj05S.exe -MatrixFlag n -ReferenceFlag m\n");
@@ -396,18 +472,8 @@ int main(int argc, char** argv) {
   createMatrix(local_n, NxM[0], A, matFlag, fileNameMat, rank, ncpu);
   createRefMatrix(local_n, NxM[0], NxM[1], r, refFlag, fileNameRef, rank, ncpu);
   matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, all_n, rank, ncpu);
- 
-  /* for (k = 0; k < M; k++){ */
-  /*   for (i = 0; i < N; i++){ */
-  /*     sum = 0; */
-  /*     for (j = 0; j < N; j++){ */
-  /* 	sum += mspace[i][j] * ref[i][k]; */
-  /*     } */
-  /*     mspace[i][N+k] = sum; */
-  /*   } */
-  /* } */
 
-  #ifdef DEBUG_PRINT_MAT
+#ifdef DEBUG_PRINT_MAT
   
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -418,8 +484,34 @@ int main(int argc, char** argv) {
     if( rank == i) {
       printf("Rank %d's matrix:\n", rank);
       printMat(A, local_n, NxM[0], NxM[1]);
-      printf("Reference Matrix: \n");
-      printMat(r, local_n, NxM[1], 0);
+      /* printf("Reference Matrix: \n"); */
+      /* printMat(r, local_n, NxM[1], 0); */
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+   
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+  printf("\n\n");
+#endif
+
+  GE(local_n, NxM[0], NxM[1],  A, rank, ncpu);
+
+
+#ifdef DEBUG_PRINT_MAT
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  for (i = 0; i < ncpu; i++){
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    if( rank == i) {
+      printf("Rank %d's matrix:\n", rank);
+      printMat(A, local_n, NxM[0], NxM[1]);
+      /* printf("Reference Matrix: \n"); */
+      /* printMat(r, local_n, NxM[1], 0); */
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -428,12 +520,7 @@ int main(int argc, char** argv) {
   
   MPI_Barrier(MPI_COMM_WORLD);
   
-  #endif
-  
-  /* generateY(n, m, A, r); */
-  /* printf("Rank %d's Full Matrix:\n", rank); */
-  /* printMat(A,n, n+m);; */
-
+#endif
 
   for (i = 0; i < local_n; i++) {
     free(A[i]);
