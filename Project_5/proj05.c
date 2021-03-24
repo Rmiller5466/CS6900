@@ -17,55 +17,103 @@
 #include <mpi.h>
 #include <string.h>
 
+/*
+  Debug segments used for troubleshooting, viewing inputs and matrices
+  Uncomment each #define desired
+*/
+
 #define DEBUG_PRINT_MAT
+#define DEBUG_PRINT_REF
 //#define DEBUG_PRINT_RECV
 //#define DEBUG_INPUTS
 
-void printVec(double* vec, int N){
+/*
+  Method: printVec
+  Inputs: (double*) vector - pointer to vector
+          (int) N - Length of vector
+ 
+  Functionality: Print to screen the passed Vector
+*/
+
+void printVec(double* vector, int N){
   int i;
 
   for (i = 0; i < N; i++) {
     if (i == (N - 1)){
-      printf("%.3f\n", vec[i]);
+      printf("%.3f\n", vector[i]);
     }else{
-      printf("%.3f ", vec[i]);
+      printf("%.3f ", vector[i]);
     }
   }
 }
 
-void printMat(double** mat, int local_N, int N, int M){
-  int i,j;
+/*
+  Method: printMat
+  Inputs: (double**) mat - pointer to a 2 dimensional matrix
+          (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N)
+	  (int) M - Number of solution columns
+  
+  Functionality: Print to screen the passed Matrix
+*/
 
+void printMat(double** mat, int local_N, int total_N, int M){
+  int i,j;
+  
   for (i = 0; i < local_N; i++) {
-    for (j = 0; j < N+M; j++) {
-      if (j == (N+M - 1)){
+    for (j = 0; j < total_N+M; j++) {
+      if (j == total_N){
+	// Divider between solution columns and x columns
+	printf(": ");
+      }
+      if (j == (total_N+M - 1)){
   	printf("%.3f\n", mat[i][j]);
       }else{
-  	if (j == N){
-  	  printf(": ");
-  	}
   	printf("%.3f ", mat[i][j]);
       }
     }
   }
 }
 
-void createMatrix(int N, int N_global, double** mspace, char* flag, char* filename, int rank, int ncpu){ 
+
+/*
+  Method: createMatrix
+  Inputs: (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N) 
+          (double**) mspace - Stands for matrix space, where the data generated will be stored
+          (char*) flag - Character string representing how to create the matrix
+	  (char*) filename - If reading from a file, this variable will hold the name of the file
+	  (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Populates an allocated matrix space with values depending on chosen 'mode' of 
+                 creation. The flag will be -r, -d, or -f.
+		 -r : Initializes the matrix with random values
+		 -d : Initializes the matrix as a diagonal matrix
+		 -f : Initializes the matrix from a provided file
+*/
+
+void createMatrix(int local_N, int total_N, double** mspace, char* flag, char* filename, int rank, int ncpu){ 
 
   int i, j; 
-  double sum; 
   int offset = rank;
 
+  //First if branch | Creates a matrix of random nubmers
   if (strcmp(flag, "-r") == 0) {
-    for (i = 0; i < N; i++) {
-      for (j = 0; j < N_global; j++) {
-	mspace[i][j] = (double)(rand() % 525);  
+    for (i = 0; i < local_N; i++) {
+      for (j = 0; j < total_N; j++) {
+	mspace[i][j] = (double)(rand() % 100);  
       }
     }
+
+  // Second if branch | Creates diagonal based matrix using an offset depending on the rank
   }else if (strcmp(flag, "-d") == 0){
-    for (i = 0; i < N; i++) {
+    for (i = 0; i < local_N; i++) {
+
       offset = rank + (i * ncpu);
-      for (j = 0; j < N_global; j++) {
+
+      for (j = 0; j < total_N; j++) {
+
 	if ( offset == j) {
 	  mspace[i][j] =  offset + 1;
 	}else{
@@ -73,47 +121,59 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
 	}
       }
     }
+
+  // Final if branch | Reads in matrix from a given file
   }else if(strcmp(flag, "-f") == 0) {
     
     FILE* fp;
     
     fp = fopen(filename, "r"); 
 
+    // Filename was invalid... exit program
     if (fp == NULL){
-      printf("Emergency Abort: File Not Found!\n");
+      printf("[createMatrix] Emergency Abort: File Not Found!\n");
       MPI_Abort(MPI_COMM_WORLD, 1);
       exit(1);
     }
 
+    // Hopefully the input string size is no bigger than 4096 
     char st[4096];
     char* num;
     char* eof;
 
+    // Skips the first line (We already got N in main() )
     fgets(st, sizeof(st), fp);
     eof = fgets(st,sizeof(st), fp);
+ 
+    // If there was not a second line, exit program
     if (eof == NULL) {
-      printf("Emergency Abort: Incorrect File Format!\n");
+      printf("[createMatrix] Emergency Abort: Incorrect File Format!\n");
       MPI_Abort(MPI_COMM_WORLD, 1);
       exit(1);
     }
     
     fclose(fp);
-    printf("String: %s\n",st);
+    // Print the received Matrix String
+    //printf("String: %s\n",st);
     
     int counter = 0;
       
     num = strtok(st, " ");
-    for (i = 0; i < N_global; i++) { 
-      for (j = 0; j < N_global; j++) {
+    for (i = 0; i < total_N; i++) { 
+      for (j = 0; j < total_N; j++) {
+	
+	// num should never be NULL, if it is, exit program
 	if (num == NULL){
-	  printf("Emergency Abort: Incorrect File Format!\n");
+	  printf("[createMatrix] Emergency Abort: Incorrect File Format!\n");
 	  MPI_Abort(MPI_COMM_WORLD, 1);
 	  exit(1);
 	}
 	if (i == offset){
 	  mspace[counter][j] = atof(num);	
 	}
-	if (i == offset && j == N_global - 1){
+	
+	//Updates the offset so that the rank can read the correct row
+	if (i == offset && j == total_N - 1){
 	  counter++;
 	  offset = rank + (counter * ncpu);
 	}
@@ -121,37 +181,59 @@ void createMatrix(int N, int N_global, double** mspace, char* flag, char* filena
       }
     }
 
-
+  // If an invalid flag was passed in, exit program
   }else{
-    printf("Emergency Abort: Invalid Input Flag (Must use -r, -d, or -f!)\n");
+    printf("[createMatrix] Emergency Abort: Invalid Input Flag (Must use -r, -d, or -f!)\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
     exit(1);
   }
 }
 
-void createRefMatrix(int l_n, int N, int M,  double** ref, char* flag, char* filename, int rank, int ncpu){ 
-  int i, j, lines;
+
+/*
+  Method: createRefMatrix
+  Inputs: (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N)
+	  (int) M - Number of reference / solution columns
+          (double**) ref - Memory space where the data generated will be stored, the reference matrix
+          (char*) flag - Character string representing how to create the matrix
+	  (char*) filename - If reading from a file, this variable will hold the name of the file
+	  (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Populates an allocated matrix space with values depending on chosen 'mode' of 
+                 creation. The flag will be -R or -F.
+		 -R : Initializes the reference matrix with random values
+		 -F : Initializes the reference matrix from a provided file
+*/
+
+void createRefMatrix(int local_N, int total_N, int M,  double** ref, char* flag, char* filename, int rank, int ncpu){ 
+  int i, j;
   int offset = rank;
 
-
+  // Creates a reference matrix of random numbers
   if (strcmp(flag, "-R") == 0) {
-    for (i = 0; i < l_n; i++) {
+    for (i = 0; i < local_N; i++) {
       for (j = 0; j < M; j++) {
-	ref[i][j] = (double)(rand() % 525);  
+	ref[i][j] = (double)(rand() % 100);  
       }
     }
+
+  // Creates the reference matrix from the provided input file
   }else if(strcmp(flag, "-F") == 0) {
     
     FILE* fp;
     
     fp = fopen(filename, "r"); 
 
+    // If the file was not found, exit the program
     if (fp == NULL){
-      printf("Emergency Abort: File Not Found!\n");
+      printf("[createRefMatrix] Emergency Abort: File Not Found!\n");
       MPI_Abort(MPI_COMM_WORLD, 1);
       exit(1);
     }
 
+    // Again, we hope the input string sizes are not greater than 4096
     char st[4096];
     char* eof;
     char* num;
@@ -160,25 +242,21 @@ void createRefMatrix(int l_n, int N, int M,  double** ref, char* flag, char* fil
     fgets(st, sizeof(st), fp);
     for (i = 0; i < M; i++){
       eof = fgets(st,sizeof(st), fp);
-      //      printf("Ref String: %s\n",st);
       
+      // If the file format is incorrect, exit the program
       if (eof == NULL) {
-	printf("Emergency Abort: Input File Line Count Didn't Match M!\n");
+	printf("[createRefMatrix] Emergency Abort: Input File Line Count Didn't Match M!\n");
 	MPI_Abort(MPI_COMM_WORLD, 1);
 	exit(1);
       }
       num = strtok(st, " ");
       
-      for (j = 0; j < N; j++) {
-	//	printf("Num: %s Offset:  Counter:  \n", num);// offset, counter);
+      for (j = 0; j < total_N; j++) {
 	if (j == offset){
 	  ref[counter][i] = atof(num);
 	  counter++;
 	  offset = rank + (counter * ncpu);
 	}
-	//if (j == offset &&
-	//ref[j][i] = atof(num);  
-	//ref[j][i] = atof(num);
 	num = strtok(NULL, " ");
       }
       counter = 0;
@@ -186,21 +264,30 @@ void createRefMatrix(int l_n, int N, int M,  double** ref, char* flag, char* fil
     }
     fclose(fp);
 
-
+  // If the input flag given is invalid, exit the program
   }else{
-    printf("Emergency Abort: Invalid Input Flag (Must use -R, or -F!)\n");
+    printf("[createRefMatrix] Emergency Abort: Invalid Input Flag (Must use -R, or -F!)\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
     exit(1);
   }
   
 }
 
-int retreiveDimension(char* fileName){
+
+
+/*
+  Method: retreiveDimension
+  Inputs: (char*) filename - Name of the file to be read from
+
+  Functionality: Reads from the provided file and returns a single value on the first line of the document  
+*/
+
+int retreiveDimension(char* filename){
   FILE* fp;
   char tmp[64];
   int rtn = 0;
-  
-  fp = fopen(fileName, "r");
+
+  fp = fopen(filename, "r");
   if (fp == NULL){
     printf("Emergency Abort: File Not Found!\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
@@ -213,10 +300,32 @@ int retreiveDimension(char* fileName){
   return rtn;
 }
 
-void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** ref, int maxR, double* global, int rank, int ncpu){
+/*
+  Method: matrixMultiply
+  Inputs: (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N) 
+          (int) M - Number of reference / solution columns
+	  (double**) mspace - The 2d vector representing a rank's A matrix
+	  (double**) ref - The 2d vector representing a ranks' reference matrix
+	  (int) maxR - Represents the maximum amount of rows any rank will have
+	  (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Populates an allocated matrix space with values depending on chosen 'mode' of 
+                 creation. The flag will be -r, -d, or -f.
+		 -r : Initializes the matrix with random values
+		 -d : Initializes the matrix as a diagonal matrix
+		 -f : Initializes the matrix from a provided file
+*/
+
+void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** ref, int maxR, int rank, int ncpu){
   int i, j, k, passes;
+  int counter;
   int myNext, myLast, origin;
   int target[2] = {0, 0};
+
+  //  printf("Local: %d, Total: %d, M: %d maxR: %d\n", local_N, total_N, M, maxR);
+
 
   myNext = rank + 1;
   myLast = rank - 1;
@@ -224,8 +333,8 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
 
   if (rank == ncpu - 1) myNext = 0;
   if (rank == 0) myLast = ncpu - 1;
+  
   int size = (maxR * M) + 1;
-  printf("MaxR: %d M: %d\n",maxR, M);
   double* tempRef =  (double*)malloc(size * sizeof(double*));
   int tempSize = 0;
   
@@ -241,18 +350,21 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
   for ( passes = 0; passes < ncpu; passes++){
 
     for (k = 0; k < M; k++){
-      target[1] = tempRef[0];
-      target[0] = 0;
 
       for (i = 0; i < local_N; i++){
-    	for (j = 0; j < total_N; j++){
-	  if (i == target[0] && j == target[1]){
-	    mspace[i][total_N + k] += mspace[i][j] * tempRef[(M * i + k) + 1];
-	    target[0]++;
-	    target[1] = tempRef[0] + (i+1) * ncpu;
-	  }
-    	}
+	counter = 0;
+	//target[1] = tempRef[0];
+      	for (j = 0; j < total_N; j++){
+      	  if (/*i == target[0]*/ j == tempRef[0] + counter * ncpu){
+      	    printf("[Rank %d, i:%d j:%d] Hey Hey Hey I'm multiplying %f by %f!!!\n",rank,i,j, mspace[i][j], tempRef[(M * counter + k) + 1]);
+      	    mspace[i][total_N + k] += mspace[i][j] * tempRef[(M * counter + k) + 1];
+	    counter++;
+	    //target[0]++;
+	    //  target[1] = tempRef[0] + i * ncpu;
+      	  }
+      	}
       }
+
     }
 
 #ifdef DEBUG_PRINT_RECV
@@ -446,8 +558,8 @@ int main(int argc, char** argv) {
     biggest_n = ((int)(NxM[0]/ncpu));
   }else{
     biggest_n = ((int)(NxM[0]/ncpu)) + 1;
-  }
-  
+  }  
+
   double** A = (double**)malloc(local_n * sizeof(double*));
   double** r = (double**)malloc(local_n * sizeof(double*));
   double** x = (double**)malloc(local_n * sizeof(double*));
@@ -471,7 +583,7 @@ int main(int argc, char** argv) {
 
   createMatrix(local_n, NxM[0], A, matFlag, fileNameMat, rank, ncpu);
   createRefMatrix(local_n, NxM[0], NxM[1], r, refFlag, fileNameRef, rank, ncpu);
-  matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, all_n, rank, ncpu);
+  matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, rank, ncpu);
 
 #ifdef DEBUG_PRINT_MAT
   
@@ -484,9 +596,11 @@ int main(int argc, char** argv) {
     if( rank == i) {
       printf("Rank %d's matrix:\n", rank);
       printMat(A, local_n, NxM[0], NxM[1]);
-      /* printf("Reference Matrix: \n"); */
-      /* printMat(r, local_n, NxM[1], 0); */
-    }
+#ifdef DEBUG_PRINT_REF
+      printf("Reference Matrix: \n");
+      printMat(r, local_n, NxM[1], 0);
+#endif    
+}
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -510,8 +624,12 @@ int main(int argc, char** argv) {
     if( rank == i) {
       printf("Rank %d's matrix:\n", rank);
       printMat(A, local_n, NxM[0], NxM[1]);
-      /* printf("Reference Matrix: \n"); */
-      /* printMat(r, local_n, NxM[1], 0); */
+#ifdef DEBUG_PRINT_REF
+
+      printf("Reference Matrix: \n");
+      printMat(r, local_n, NxM[1], 0);
+
+#endif
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
