@@ -24,8 +24,8 @@ double randVar(){
   // Notes:
   // 2147483647 is the largest possible value of rand()
   // printf("max=%llu\n",RAND_MAX);
-
-  return (double)((rand()%2000000000)/2000000000.0);
+  return (double)((rand()%2147483647)/2147483647.0);
+  // return (double)((rand()%2000000000)/2000000000.0);
 }
 
 

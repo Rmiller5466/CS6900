@@ -22,7 +22,7 @@
   Uncomment each #define desired
 */
 
-//#define DEBUG_PRINT_MAT
+#define DEBUG_PRINT_MAT
 //#define DEBUG_PRINT_REF
 //#define DEBUG_PRINT_RECV
 //#define DEBUG_INPUTS
@@ -40,9 +40,9 @@ void printVec(double* vector, int N){
 
   for (i = 0; i < N; i++) {
     if (i == (N - 1)){
-      printf("%.3f\n", vector[i]);
+      printf("%.20f\n", vector[i]);
     }else{
-      printf("%.3f ", vector[i]);
+      printf("%.20f ", vector[i]);
     }
   }
 }
@@ -102,7 +102,7 @@ void createMatrix(int local_N, int total_N, double** mspace, char* flag, char* f
   if (strcmp(flag, "-r") == 0) {
     for (i = 0; i < local_N; i++) {
       for (j = 0; j < total_N; j++) {
-	mspace[i][j] = (double)((rand() % 100) + 1);  
+	mspace[i][j] = (double)((rand() % 100) + rank);  
       }
     }
 
@@ -215,7 +215,7 @@ void createRefMatrix(int local_N, int total_N, int M,  double** ref, char* flag,
   if (strcmp(flag, "-R") == 0) {
     for (i = 0; i < local_N; i++) {
       for (j = 0; j < M; j++) {
-	ref[i][j] = (double)((rand() % 25) + 1);  
+	ref[i][j] = (double)((rand() % 50) + rank);  
       }
     }
 
@@ -361,24 +361,24 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
       } 
     }
 
-#ifdef DEBUG_PRINT_RECV
-    MPI_Barrier(MPI_COMM_WORLD);
+/* #ifdef DEBUG_PRINT_RECV */
+/*     MPI_Barrier(MPI_COMM_WORLD); */
 
-    for (i = 0; i < ncpu; i++){
+/*     for (i = 0; i < ncpu; i++){ */
     
-      MPI_Barrier(MPI_COMM_WORLD);
+/*       MPI_Barrier(MPI_COMM_WORLD); */
     
-      if( rank == i) {
-	printf("Rank: %d :: ", rank);
-	printVec(tempRef, size);
-      }
+/*       if( rank == i) { */
+/* 	printf("Rank: %d :: ", rank); */
+/* 	printVec(tempRef, size); */
+/*       } */
       
-      MPI_Barrier(MPI_COMM_WORLD);
-    }
+/*       MPI_Barrier(MPI_COMM_WORLD); */
+/*     } */
    
   
-    MPI_Barrier(MPI_COMM_WORLD);
-#endif
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+/* #endif */
 
     MPI_Send(tempRef, size, MPI_DOUBLE, myNext, 0, MPI_COMM_WORLD);
     MPI_Recv(tempRef, size, MPI_DOUBLE, myLast, 0, MPI_COMM_WORLD,
@@ -511,7 +511,11 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
     
     if (rank == baseRank){
       for (i = 0; i < M; i++){
+	//	printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
 	tempX[i] = mat[base_Local_Index][total_N+i] / mat[base_Local_Index][base];
+	
+	//printf("[%d] tempX: %d is now: %f on base: %d\n",rank, i, tempX[i], base);
+
 	xVec[base_Local_Index][i] = tempX[i];
 	      
       }
@@ -522,7 +526,8 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
     for (row = 0; row < local_N; row++){
       if (row * ncpu + rank < base){
     	for (i = 0; i < M; i++){
-    	  mat[row][total_N+i] = mat[row][total_N+i] - tempX[i] * mat[row][base];
+	  // printf("[%d] doing %f - %f * %f\n",rank, mat[row][total_N+i], tempX[i], mat[row][base]);
+  	  mat[row][total_N+i] = mat[row][total_N+i] - tempX[i] * mat[row][base];
     	}
 	 mat[row][base] = 0;
       }
@@ -609,7 +614,9 @@ int main(int argc, char** argv) {
   double** A = (double**)malloc(local_n * sizeof(double*));
   double** r = (double**)malloc(local_n * sizeof(double*));
   double** x = (double**)malloc(local_n * sizeof(double*));
-  
+  double* errorVec = (double*)malloc(NxM[1] * sizeof(double*));
+  double* epsilon = (double*)malloc(NxM[1] * sizeof(double*));
+
   for (i = 0; i < local_n; i++){
     A[i] = (double *)malloc(sizeof(double) * (NxM[0] + NxM[1]));
     r[i] = (double *)malloc(sizeof(double) * NxM[1]);
@@ -625,68 +632,73 @@ int main(int argc, char** argv) {
       A[i][NxM[0] + j] = 0;
     }
   }
+
+  for(i = 0; i < NxM[1]; i++){
+    errorVec[i] = 0;
+    epsilon[i] = 0;
+  }
   
 
   createMatrix(local_n, NxM[0], A, matFlag, fileNameMat, rank, ncpu);
   createRefMatrix(local_n, NxM[0], NxM[1], r, refFlag, fileNameRef, rank, ncpu);
   matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, rank, ncpu);
-  printf("\n");
-
-#ifdef DEBUG_PRINT_MAT
-  
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  for (i = 0; i < ncpu; i++){
-    
-    MPI_Barrier(MPI_COMM_WORLD);
-    
-    if( rank == i) {
-      /* printf("Rank %d's matrix:\n", rank); */
-      /* printMat(A, local_n, NxM[0], NxM[1]); */
-#ifdef DEBUG_PRINT_REF
-      printf("Reference Matrix: \n");
-      printMat(r, local_n, NxM[1], 0);
-#endif    
-}
-
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-   
-  
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
   GE(local_n, NxM[0], NxM[1],  A, rank, ncpu);
   BS(local_n, NxM[0], NxM[1], A, x, rank, ncpu);
-  printf("\n");
 
-#ifdef DEBUG_PRINT_MAT
-  
-  MPI_Barrier(MPI_COMM_WORLD);
-  for (i = 0; i < ncpu; i++){
-    
-    MPI_Barrier(MPI_COMM_WORLD);
-    
-    if( rank == i) {
-      /* printf("Rank %d's matrix:\n", rank); */
-      /* printMat(A, local_n, NxM[0], NxM[1]); */
-#ifdef DEBUG_PRINT_REF
-
-      printf("Reference Matrix: \n");
-      printMat(r, local_n, NxM[1], 0);
-
-#endif
-      printf("Solution Matrix: \n");
-      printMat(x, local_n, NxM[1], 0);
+  for( i = 0; i < local_n; i++){
+    for (j = 0; j < NxM[1]; j++){
+      errorVec[j] += pow(x[i][j] - r[i][j], 2);
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
   }
+
+  MPI_Reduce(errorVec,epsilon,NxM[1],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+  if (rank == 0){
+    for( i = 0; i < NxM[1]; i++){
+      epsilon[i] = sqrt(epsilon[i]) / NxM[0];
+    }
+    if (epsilon[0] > 1){
+      printf("Error! System has no Solution!\n");
+    }else{
+      
+      printVec(epsilon, NxM[1]);
+    }
+  }
+
+/* #ifdef DEBUG_PRINT_MAT */
+  
+/*   MPI_Barrier(MPI_COMM_WORLD); */
+/*   for (i = 0; i < ncpu; i++){ */
+    
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+    
+/*     if( rank == i) { */
+/*       printf("Rank %d's matrix:\n", rank); */
+/*       printMat(A, local_n, NxM[0], NxM[1]); */
+
+/*       printf("\nReference Matrix: \n"); */
+/*       printMat(r, local_n, NxM[1], 0); */
+
+/*       printf("Solution Matrix: \n"); */
+/*       printMat(x, local_n, NxM[1], 0); */
+      
+/*       printf("ErrorVec:\n"); */
+/*       printVec(errorVec, NxM[1]); */
+
+/*       printf("Epsilon:\n"); */
+/*       printVec(epsilon, NxM[1]); */
+/*     } */
+
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+/*   } */
    
   
-  MPI_Barrier(MPI_COMM_WORLD);
+/*   MPI_Barrier(MPI_COMM_WORLD); */
   
-#endif
+/* #endif */
+
+
 
   for (i = 0; i < local_n; i++) {
     free(A[i]);
@@ -696,6 +708,12 @@ int main(int argc, char** argv) {
   free(A);
   free(r);
   free(x);
+  free(errorVec);
+  free(epsilon);
+  
 
   MPI_Finalize(); 
 }
+
+
+

@@ -1,10 +1,1 @@
-
-
-
-
-
-
-
-
-
-
+slurmstepd: error: *** JOB 210995 ON node03 CANCELLED AT 2021-03-25T16:53:15 ***

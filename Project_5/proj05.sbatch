@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -N 1
-#SBATCH --tasks-per-node=5
+#SBATCH --tasks-per-node=2
 #SBATCH --job-name=proj05
 #SBATCH --output=proj05.txt
 
@@ -20,7 +20,7 @@ module purge
 ## Load the appropriate module
 module load openmpi-2.0/gcc
 
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 5 ./proj05.mpi -r 200 -R 15
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 2 ./proj05.mpi -r 5000 -R 10
 #mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 3 ./proj05.mpi -f testFile.txt -F testref.txt
 #mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 3 ./proj05.mpi -d 10 -R 3
 #echo 
