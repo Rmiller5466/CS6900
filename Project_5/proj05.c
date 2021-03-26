@@ -2,7 +2,7 @@
 // Project 05
 // Ryan Miller
 // w051rem
-// Due 19 March 2021
+// Due 26 March 2021
 // System = bender
 // Compiler syntax = ./compile.sh proj05
 // Job Control File = proj05.sbatch
@@ -17,15 +17,31 @@
 #include <mpi.h>
 #include <string.h>
 
+/*******************************
+     DEBUGGING INFORMATION
+*******************************/
+
 /*
   Debug segments used for troubleshooting, viewing inputs and matrices
   Uncomment each #define desired
+  
+  NOTE: In order to make the code more readable, I have relocated the actual
+        debugging code into DebugHelper.txt.  Only DEBUG_INPUTS remains in this file.
+	Could not make a proper testing/debugging framework, therefor the debugging code 
+	will have to be copy/pasted into this file when desired.  
+
+	I have included // markers at good locations for the copy/paste debugging
+	A few shorter independent debug lines have been left for ease of use 
 */
 
-#define DEBUG_PRINT_MAT
+//#define DEBUG_PRINT_MAT
 //#define DEBUG_PRINT_REF
 //#define DEBUG_PRINT_RECV
 //#define DEBUG_INPUTS
+
+/*******************************
+     HELPER PRINT METHODS
+*******************************/
 
 /*
   Method: printVec
@@ -39,7 +55,7 @@ void printVec(double* vector, int N){
   int i;
 
   for (i = 0; i < N; i++) {
-    if (i == (N - 1)){
+    if (i%3 == 2 || i == N-1 ){
       printf("%.20f\n", vector[i]);
     }else{
       printf("%.20f ", vector[i]);
@@ -75,6 +91,9 @@ void printMat(double** mat, int local_N, int total_N, int M){
   }
 }
 
+/*******************************
+   MATRIX CREATION METHODS
+*******************************/
 
 /*
   Method: createMatrix
@@ -300,6 +319,10 @@ int retreiveDimension(char* filename){
   return rtn;
 }
 
+/*******************************
+   MATRIX OPERATIONS METHODS
+*******************************/
+
 /*
   Method: matrixMultiply
   Inputs: (int) local_N - Number of rows
@@ -320,11 +343,11 @@ int retreiveDimension(char* filename){
 
 void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** ref, int maxR, int rank, int ncpu){
   int i, j, k, passes;
-  int counter;
-  int myNext, myLast, origin;
-  
-  //  printf("Local: %d, Total: %d, M: %d maxR: %d\n", local_N, total_N, M, maxR);
 
+  // Counter is used as an offset for multiplication 
+  int counter;
+ 
+  int myNext, myLast, origin;
 
   myNext = rank + 1;
   myLast = rank - 1;
@@ -336,9 +359,11 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
   int size = (maxR * M) + 1;
   double* tempRef =  (double*)malloc(size * sizeof(double*));
   int tempSize = 0;
-  
+ 
+  // Index 0 of tempRef is the rank that this data originated from  
   tempRef[0] = (double)origin;
   
+  // Flattening the ref matrix into a vector to be used for message passing
   for (i = 0; i < local_N; i++){
     for (j = 0; j < M; j++){
       tempRef[tempSize+1] = ref[i][j];
@@ -346,13 +371,19 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
     }
   }
   
+  // Passes represents the ranks passing their information.  After the loop finishes,
+  // the reference data will have fully rotated
+ 
   for ( passes = 0; passes < ncpu; passes++){
 
+    // K cycles through for each reference column 
     for (k = 0; k < M; k++){
 
       for (i = 0; i < local_N; i++){
 	counter = 0;
       	for (j = 0; j < total_N; j++){
+	  
+	  // Makes sure the offset is correct in order to multiply the correct values
       	  if (j == tempRef[0] + counter * ncpu){
       	    mspace[i][total_N + k] += mspace[i][j] * tempRef[(M * counter + k) + 1];
 	    counter++;
@@ -361,24 +392,7 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
       } 
     }
 
-/* #ifdef DEBUG_PRINT_RECV */
-/*     MPI_Barrier(MPI_COMM_WORLD); */
-
-/*     for (i = 0; i < ncpu; i++){ */
-    
-/*       MPI_Barrier(MPI_COMM_WORLD); */
-    
-/*       if( rank == i) { */
-/* 	printf("Rank: %d :: ", rank); */
-/* 	printVec(tempRef, size); */
-/*       } */
-      
-/*       MPI_Barrier(MPI_COMM_WORLD); */
-/*     } */
-   
-  
-/*     MPI_Barrier(MPI_COMM_WORLD); */
-/* #endif */
+  // (DEBUGGING INSERT LOCATION FOR: DEBUG_RECV)
 
     MPI_Send(tempRef, size, MPI_DOUBLE, myNext, 0, MPI_COMM_WORLD);
     MPI_Recv(tempRef, size, MPI_DOUBLE, myLast, 0, MPI_COMM_WORLD,
@@ -388,10 +402,29 @@ void matrixMultiply(int local_N, int total_N, int M, double** mspace, double** r
   free(tempRef);
 }
 
+/*
+  Method: pivot
+  Inputs: (double**) mat - The 2d vector representing a rank's A matrix
+          (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N) 
+          (int) M - Number of reference / solution columns
+	  (int) currentCol - The index being used for pivoting 
+	  (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Swaps rows on and between ranks based on the largest global
+                 magnitude at the desired index  
+*/
+
 void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int rank, int ncpu){
   int i;
+
+  // Represent the local row index and rank of the max magnitude
   int max_Local_Index, maxRank;
-  int swapRank, swap_Local_Index;
+
+  // Represent the current local row index and rank of the row that will be swapped  
+  int swap_Local_Index, swapRank;
+  
   int size = total_N + M;
 
   struct { 
@@ -400,10 +433,13 @@ void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int ra
   } localMax, globalMax; 
 
 
-  // Local Max
   localMax.value = 0; 
   localMax.index = 0; 
+
+  // Looks for the max value at index = currentCol on this rank
   for (i=0; i < local_N; i++){ 
+
+    // Ensures that the row being checked exists below the current pivot row
     if (rank + ncpu * i >= currentCol){
       if (fabs(localMax.value) < fabs(mat[i][currentCol])) { 
 	localMax.value = mat[i][currentCol]; 
@@ -411,7 +447,8 @@ void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int ra
       } 
     }
   }
-  
+
+  // Changing the local index to the global index  
   localMax.index = rank + ncpu * localMax.index; 
 
   MPI_Reduce(&localMax, &globalMax, 1, MPI_DOUBLE_INT, MPI_MAXLOC, 0, MPI_COMM_WORLD );
@@ -419,13 +456,15 @@ void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int ra
 
   //All Ranks now have the global max
 
+  //Calculates information for the two rows that will be swapped
+
   maxRank = globalMax.index % ncpu;
   max_Local_Index = globalMax.index / ncpu;
 
   swapRank = currentCol % ncpu;
   swap_Local_Index = currentCol / ncpu;
 
-  
+  // Rows being swapped are on different ranks  
   if (swapRank != maxRank){
     
     double* tempRow;
@@ -449,6 +488,8 @@ void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int ra
     	       MPI_STATUS_IGNORE);
       mat[max_Local_Index] = tempRow;
     }
+
+  // Rows being swapped are on the same rank AND are not the same row
   }else if (swapRank == maxRank && rank == maxRank && max_Local_Index != swap_Local_Index){
 
      double* tempRow;
@@ -458,12 +499,21 @@ void pivot(double** mat, int local_N, int total_N, int M, int currentCol, int ra
    
 
   } 
-  /* if (rank == 0) {  */
-  /*   printf("Pivot Col: %d, Maxval=%f maxrank=%d maxindexG=%d maxindexL=%d\n",currentCol,maxVal,maxRank,max_Global_Index, max_Local_Index); */
-  /*   printf("Pivot Col: %d, currank=%d curindexG=%d curindexL=%d\n",currentCol,currentRank,current_Global_Index, current_Local_Index); */
-
-  /* } */
 }
+
+/*
+  Method: GE
+  Inputs: (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N) 
+          (int) M - Number of reference / solution columns
+	  (double**) mat - The 2d vector representing a rank's A matrix
+          (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Preform Gaussian Elimination  
+
+*/
+
 
 void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
   int i, base, row, col;
@@ -472,13 +522,17 @@ void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
   int size = total_N + M;
   double tempR[size];
 
-  
+  // Globally, Going from Row 0 till Row N-1  
   for (base = 0; base < total_N-1; base++) {
+
+    // Pivot the rows so that the largest magnitude is being used
     pivot(mat, local_N, total_N, M, base, rank, ncpu);
 
+    // Calculate which rank has the 'base' row and where
     baseRank=base%ncpu;
     base_Local_Index = (base-baseRank)/ncpu;
 
+    // Grab the base row and broadcast it to all ranks
     if (rank == baseRank){
       for (i = 0; i < size; i++){
       tempR[i] = mat[base_Local_Index][i];
@@ -488,6 +542,7 @@ void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
     
 
     for (row = 0; row < local_N; row++){
+      // Ensures that only rows existing globally under the base row are modified  
       if (row * ncpu + rank > base){
 	cancelVal = mat[row][base]/tempR[base];
 	for (col = 0; col < size; col++){
@@ -496,24 +551,39 @@ void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
       }
     }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-
 }
+
+/*
+  Method: BS
+  Inputs: (int) local_N - Number of rows
+	  (int) total_N - Number of columns (Also the global N) 
+          (int) M - Number of reference / solution columns
+	  (double**) mat - The 2d vector representing a rank's A matrix
+          (double**) xVec - The 2d vector representing a rank's x matrix
+          (int) rank - Processor number
+	  (int) ncpu - Total number of processors
+  
+  Functionality: Preform back substitution in order to solve for x 
+
+*/
+
 
 void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank, int ncpu){
   int base, row, i;
   int baseRank, base_Local_Index;
   double tempX[M];
 
+  // Solves for x starting from the bottom of the global matrix
   for ( base = total_N-1; base >= 0; base--){
     baseRank=base%ncpu;
     base_Local_Index = (base-baseRank)/ncpu;
     
     if (rank == baseRank){
       for (i = 0; i < M; i++){
-	//	printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
+	// Debug line to see waht numbers are being divided
+	//printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
 	tempX[i] = mat[base_Local_Index][total_N+i] / mat[base_Local_Index][base];
-	
+	// Debug line to see what x on this rank was found to be
 	//printf("[%d] tempX: %d is now: %f on base: %d\n",rank, i, tempX[i], base);
 
 	xVec[base_Local_Index][i] = tempX[i];
@@ -521,11 +591,14 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
       }
     }
     
+    // Sends x to all other ranks
     MPI_Bcast(&tempX, M, MPI_DOUBLE, baseRank, MPI_COMM_WORLD);	
     
+    // Uses this x to operate on appropriate values 
     for (row = 0; row < local_N; row++){
       if (row * ncpu + rank < base){
     	for (i = 0; i < M; i++){
+	  // Debug line to help see what math is being performed on each rank
 	  // printf("[%d] doing %f - %f * %f\n",rank, mat[row][total_N+i], tempX[i], mat[row][base]);
   	  mat[row][total_N+i] = mat[row][total_N+i] - tempX[i] * mat[row][base];
     	}
@@ -536,9 +609,12 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
   }
 }
 
+/*******************************
+             MAIN
+*******************************/
 
 int main(int argc, char** argv) {
-
+  double total_time = 0.0;
   int rank, ncpu;
 
   MPI_Init(&argc, &argv);
@@ -559,13 +635,17 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
+  // Barrier placed here just to ensure that their were no input issues
   MPI_Barrier(MPI_COMM_WORLD);
+  total_time -= MPI_Wtime();
 
   char* matFlag;
   char* refFlag;
   char* fileNameMat;
   char* fileNameRef;
   int NxM[2] = {0,0};
+
+  // Reading in and setting N and M accordingly
 
   matFlag = argv[1];
   fileNameMat = argv[2];
@@ -589,16 +669,19 @@ int main(int argc, char** argv) {
   printf("Inputs:  Flag1: %s n: %d fileMat: %s Flag2: %s m: %d fileRef: %s\n", matFlag, NxM[0], fileNameMat, refFlag,  NxM[1], fileNameRef);
 #endif
   
-  // Calculates which processor has what part of the global elements
   int local_n, tmp_n, biggest_n, R, i, j;
 
   double all_n[ncpu];
   
   for (i = 0; i < ncpu; i++){
-    tmp_n= (int)( NxM[0]/ncpu);   // All processors have at least this many rows
-    R = ( NxM[0]%ncpu);       // Remainder of above calculation
+
+    // All processors have at least this many rows
+    tmp_n= (int)( NxM[0]/ncpu);
+
+    // The first R ranks will have one more row  
+    R = ( NxM[0]%ncpu);       
     if (i<R) {
-      ++tmp_n;             // First R processors have one more element
+      ++tmp_n;             
     }
     all_n[i] = tmp_n;
   }
@@ -626,7 +709,7 @@ int main(int argc, char** argv) {
     assert(x[i] != NULL);
   }
 
-
+  
   for (i = 0; i < local_n; i++) {
     for (j = 0; j < NxM[1]; j++){
       A[i][NxM[0] + j] = 0;
@@ -636,16 +719,21 @@ int main(int argc, char** argv) {
   for(i = 0; i < NxM[1]; i++){
     errorVec[i] = 0;
     epsilon[i] = 0;
-  }
-  
+  }  
 
   createMatrix(local_n, NxM[0], A, matFlag, fileNameMat, rank, ncpu);
+  
   createRefMatrix(local_n, NxM[0], NxM[1], r, refFlag, fileNameRef, rank, ncpu);
+  
   matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, rank, ncpu);
 
+  // (DEBUGGING INSERT LOCATION FOR: DEBUG_MAT/DEBUG_REF)
+
   GE(local_n, NxM[0], NxM[1],  A, rank, ncpu);
+  
   BS(local_n, NxM[0], NxM[1], A, x, rank, ncpu);
 
+  // Find Error Values
   for( i = 0; i < local_n; i++){
     for (j = 0; j < NxM[1]; j++){
       errorVec[j] += pow(x[i][j] - r[i][j], 2);
@@ -654,52 +742,26 @@ int main(int argc, char** argv) {
 
   MPI_Reduce(errorVec,epsilon,NxM[1],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
+  // Print run specific information and Epsilon values
   if (rank == 0){
+
     for( i = 0; i < NxM[1]; i++){
       epsilon[i] = sqrt(epsilon[i]) / NxM[0];
     }
+
+    total_time += MPI_Wtime();
+    printf("\nProgram Information:\nTotal Processors: %d | Total Time: %f | N: %d | M: %d\n\n",ncpu, total_time, NxM[0], NxM[1]);
     if (epsilon[0] > 1){
-      printf("Error! System has no Solution!\n");
+      printf("Error! System has no Solution!(This doesn't seem to happen often, so run it a few more times!)\n");
     }else{
-      
+      printf("Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, Epsilon M-1 will be last\n");
       printVec(epsilon, NxM[1]);
     }
   }
 
-/* #ifdef DEBUG_PRINT_MAT */
-  
-/*   MPI_Barrier(MPI_COMM_WORLD); */
-/*   for (i = 0; i < ncpu; i++){ */
-    
-/*     MPI_Barrier(MPI_COMM_WORLD); */
-    
-/*     if( rank == i) { */
-/*       printf("Rank %d's matrix:\n", rank); */
-/*       printMat(A, local_n, NxM[0], NxM[1]); */
+  // (DEBUGGING INSERT LOCATION FOR: DEBUG_MAT/DEBUG_REF)
 
-/*       printf("\nReference Matrix: \n"); */
-/*       printMat(r, local_n, NxM[1], 0); */
-
-/*       printf("Solution Matrix: \n"); */
-/*       printMat(x, local_n, NxM[1], 0); */
-      
-/*       printf("ErrorVec:\n"); */
-/*       printVec(errorVec, NxM[1]); */
-
-/*       printf("Epsilon:\n"); */
-/*       printVec(epsilon, NxM[1]); */
-/*     } */
-
-/*     MPI_Barrier(MPI_COMM_WORLD); */
-/*   } */
-   
-  
-/*   MPI_Barrier(MPI_COMM_WORLD); */
-  
-/* #endif */
-
-
-
+  //Free up memory
   for (i = 0; i < local_n; i++) {
     free(A[i]);
     free(r[i]);

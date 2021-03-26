@@ -1,0 +1,66 @@
+//#define DEBUG_PRINT_MAT
+//#define DEBUG_PRINT_REF
+//#define DEBUG_PRINT_RECV
+//#define DEBUG_INPUTS
+
+//  printf("Local: %d, Total: %d, M: %d maxR: %d\n", local_N, total_N, M, maxR);
+
+/* #ifdef DEBUG_PRINT_RECV */
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+
+/*     for (i = 0; i < ncpu; i++){ */
+    
+/*       MPI_Barrier(MPI_COMM_WORLD); */
+    
+/*       if( rank == i) { */
+/* 	 printf("Rank: %d :: ", rank); */
+/* 	 printVec(tempRef, size); */
+/*       } */
+      
+/*       MPI_Barrier(MPI_COMM_WORLD); */
+/*     } */
+   
+  
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+/* #endif */
+
+/* if (rank == 0) {  */
+/*    printf("Pivot Col: %d, Maxval=%f maxrank=%d maxindexG=%d maxindexL=%d\n",currentCol,maxVal,maxRank,max_Global_Index, max_Local_Index); */
+/*    printf("Pivot Col: %d, currank=%d curindexG=%d curindexL=%d\n",currentCol,currentRank,current_Global_Index, current_Local_Index); */
+/* } */
+
+//   printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
+//   printf("[%d] tempX: %d is now: %f on base: %d\n",rank, i, tempX[i], base);
+
+// printf("[%d] doing %f - %f * %f\n",rank, mat[row][total_N+i], tempX[i], mat[row][base]);
+
+
+/* #ifdef DEBUG_PRINT_MAT */
+  
+/*   MPI_Barrier(MPI_COMM_WORLD); */
+/*   for (i = 0; i < ncpu; i++){ */
+    
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+    
+/*     if( rank == i) { */
+/*       printf("Rank %d's matrix:\n", rank); */
+/*       printMat(A, local_n, NxM[0], NxM[1]); */
+
+/*       printf("\nReference Matrix: \n"); */
+/*       printMat(r, local_n, NxM[1], 0); */
+
+/*       printf("Solution Matrix: \n"); */
+/*       printMat(x, local_n, NxM[1], 0); */
+      
+/*       printf("ErrorVec:\n"); */
+/*       printVec(errorVec, NxM[1]); */
+
+/*       printf("Epsilon:\n"); */
+/*       printVec(epsilon, NxM[1]); */
+/*     } */
+
+/*     MPI_Barrier(MPI_COMM_WORLD); */
+/*   } */
+/*   MPI_Barrier(MPI_COMM_WORLD); */
+  
+/* #endif */
