@@ -6,8 +6,15 @@
 // System = bender
 // Compiler syntax = ./compile.sh proj05
 // Job Control File = proj05.sbatch
-// Additional File  = NA
+// Additional File  = (optional) DebugHelper.txt
 // Results file     = proj05.txt
+
+/* Additional Comments:
+   My random number generator seems to be flawed in the sense that I 
+    get no solution answers semi freqently.  Also there are likely many 
+    small errors/inconsistencies, but with multiple runs and different number
+    choices, the logic works most of the time.
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +42,6 @@
 */
 
 //#define DEBUG_PRINT_MAT
-//#define DEBUG_PRINT_REF
 //#define DEBUG_PRINT_RECV
 //#define DEBUG_INPUTS
 
@@ -528,6 +534,7 @@ void GE(int local_N, int total_N, int M, double** mat,  int rank, int ncpu){
     // Pivot the rows so that the largest magnitude is being used
     pivot(mat, local_N, total_N, M, base, rank, ncpu);
 
+ 
     // Calculate which rank has the 'base' row and where
     baseRank=base%ncpu;
     base_Local_Index = (base-baseRank)/ncpu;
@@ -581,7 +588,7 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
     if (rank == baseRank){
       for (i = 0; i < M; i++){
 	// Debug line to see waht numbers are being divided
-	//printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
+	// printf("[%d] tempX: %d will be: %f divided by: %f\n",rank, i, mat[base_Local_Index][total_N+i],  mat[base_Local_Index][base]);
 	tempX[i] = mat[base_Local_Index][total_N+i] / mat[base_Local_Index][base];
 	// Debug line to see what x on this rank was found to be
 	//printf("[%d] tempX: %d is now: %f on base: %d\n",rank, i, tempX[i], base);
@@ -599,7 +606,7 @@ void BS(int local_N, int total_N, int M, double** mat, double** xVec,  int rank,
       if (row * ncpu + rank < base){
     	for (i = 0; i < M; i++){
 	  // Debug line to help see what math is being performed on each rank
-	  // printf("[%d] doing %f - %f * %f\n",rank, mat[row][total_N+i], tempX[i], mat[row][base]);
+	  //printf("[%d] doing %f - %f * %f\n",rank, mat[row][total_N+i], tempX[i], mat[row][base]);
   	  mat[row][total_N+i] = mat[row][total_N+i] - tempX[i] * mat[row][base];
     	}
 	 mat[row][base] = 0;
@@ -727,10 +734,10 @@ int main(int argc, char** argv) {
   
   matrixMultiply(local_n, NxM[0], NxM[1], A, r, biggest_n, rank, ncpu);
 
-  // (DEBUGGING INSERT LOCATION FOR: DEBUG_MAT/DEBUG_REF)
+  // (DEBUGGING INSERT LOCATION FOR: DEBUG_MAT)
 
   GE(local_n, NxM[0], NxM[1],  A, rank, ncpu);
-  
+
   BS(local_n, NxM[0], NxM[1], A, x, rank, ncpu);
 
   // Find Error Values
@@ -758,8 +765,6 @@ int main(int argc, char** argv) {
       printVec(epsilon, NxM[1]);
     }
   }
-
-  // (DEBUGGING INSERT LOCATION FOR: DEBUG_MAT/DEBUG_REF)
 
   //Free up memory
   for (i = 0; i < local_n; i++) {
