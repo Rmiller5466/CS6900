@@ -5,7 +5,7 @@
 // Due 2 April 2021
 // System = bender
 // Compiler syntax = ./compile.sh proj06
-// Job Control File = proj06.sbatch
+// Job Control File = proj06.batch
 // Additional File  = N/A
 // Results file     = proj06.txt
 
