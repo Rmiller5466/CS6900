@@ -1,6 +1,6 @@
 
 Program Information:
-Total Processors: 3 | Total Time: 0.002160 | N: 5 | M: 5
+Total Processors: 3 | Total Time: 0.002068 | N: 5 | M: 5
 
 Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, Epsilon M-1 will be last
 0.00000000000000023915 0.00000000000000255457 0.00000000000001396023
@@ -8,7 +8,7 @@ Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, E
 
 
 Program Information:
-Total Processors: 5 | Total Time: 0.004699 | N: 27 | M: 15
+Total Processors: 5 | Total Time: 0.004465 | N: 27 | M: 15
 
 Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, Epsilon M-1 will be last
 0.00000000000000000000 0.00000000000000000000 0.00000000000000000000
@@ -19,6 +19,10 @@ Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, E
 
 
 Program Information:
-Total Processors: 5 | Total Time: 0.010024 | N: 52 | M: 10
+Total Processors: 5 | Total Time: 0.010105 | N: 52 | M: 10
 
-Error! System has no Solution!(This doesn't seem to happen often, so run it a few more times!)
+Epsilon Values split into rows of 3 for readability.  Epsilon 0 will be first, Epsilon M-1 will be last
+0.00000000000008025319 0.00000000000006025857 0.00000000000002571538
+0.00000000000003257471 0.00000000000004029088 0.00000000000004206494
+0.00000000000004614345 0.00000000000004023544 0.00000000000004013844
+0.00000000000002698700

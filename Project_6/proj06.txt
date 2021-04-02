@@ -1,0 +1,2 @@
+
+ 1000000 trials, pi is 3.141124 Number of Threads was: 8 
