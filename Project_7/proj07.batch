@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#SBATCH -N 2
+#SBATCH --tasks-per-node=1
+#SBATCH -c 8
+#SBATCH --job-name=proj07
+#SBATCH --output=proj07.txt
+
+## First make sure all other modules are not loaded
+module purge
+
+## Load the appropriate module
+## To see a list of available modules run:
+## module avail
+module load openmpi-2.0/gcc
+
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 2 ./proj07.mpi 12

@@ -1,0 +1,7 @@
+node01.cluster is ready with  task ID = 0
+Creating a 12 by 12 diagonal matrix
+node02.cluster is ready with  task ID = 1
+node01.cluster calculate it's part with determinant=479001600.00
+node02.cluster calculate it's part with determinant=0.00
+Elapsed time is 28.270389
+Determinant of matrix is :479001600.00
