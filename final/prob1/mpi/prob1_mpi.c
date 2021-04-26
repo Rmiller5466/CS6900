@@ -1,8 +1,21 @@
+// cs6900
+// Final - prob1_mpi
+// Ryan Miller
+// w051rem
+// Due 27 April 2021
+// System = bender
+// Compiler syntax = ./prob1_mpi.compile prob1_mpi
+// Job Control File = prob1_mpi.batch
+// Additional File  = N/A
+// Results file     = prob1_mpi.txt
+// NOTE: Only the mersenne loop is parallelized.  
+
 # include <stdlib.h>
 # include <stdio.h>
 # include <math.h>
 # include <stdbool.h>
 # include <time.h>
+#include <mpi.h>
 
 // ref http://www.tsm-resources.com/alists/mers.html
 
@@ -31,6 +44,12 @@ bool quick_is_prime(unsigned long long int j, int *prime, int k);
 
 int main ( int argc, char **argv )
 {
+  int rank, ncpu;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ncpu);
+
   int prime[MAXPRIME];
   int mersenne[64];
 
@@ -50,7 +69,8 @@ int main ( int argc, char **argv )
   // try to make the below to run in parallel
   // Create prime vector
   int n=17; // starting prime - skip even and factor of 6
-  while ( k<MAXK){
+
+  while (k<MAXK){
     make_prime_vector(n, prime, &k);
     make_prime_vector(n+2, prime, &k);
     n=n+6;
@@ -60,34 +80,78 @@ int main ( int argc, char **argv )
     */
   }
 
-  clock_t end = clock();
-  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-  // Only one core/thread prints the timing
-  printf("time creating prime vector %f \n",time_spent);
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    // Only one core/thread prints the timing
+  if (rank == 0){
+    printf("time creating prime vector %f \n",time_spent);
+  }
 
-  clock_t end = clock();
   // opmp has get see
   // https://www.openmp.org/spec-html/5.0/openmpsu160.html
   //try to modify to run in parallel
   n=0;
-  for (i=2; i<64; ++i){
+
+  int extra = 64 % ncpu;
+  int split = 64 / ncpu;
+  int st = 0;
+  int en = 0;
+
+  if (rank < extra) {
+    st = 2 + rank * split ;
+    en = st + split + 1;
+
+  }else{
+    st = 2 + rank * split;
+    en = st + split;
+  }
+  
+  int local[10] = {0};
+  int localCount = 0;
+  int globalCount = 0;
+  int globalTemp[64] = {0};
+  int currentCount = 0;
+  int l;
+
+  for (i=st; i<en; ++i){
     j=(unsigned long long int)pow(2,i)-1;
     if(quick_is_prime(j,prime,k)){
-      mersenne[n]=i;
-      ++n;
+      local[localCount]=i;
+      ++localCount;
     }
   }
+  
 
-  clock_t end2 = clock();
-  double time_spent2 = (double)(end2 - end) / CLOCKS_PER_SEC;
-  // Only one core/thread prints the timing
-  printf("time creating mersenne primes %f \n",time_spent2);
+  for (i = 0; i < ncpu; i++){
+    if (i == rank){
+      for (l = 0; l < localCount; l++){
+	globalTemp[currentCount] = local[l];
+	currentCount++;
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&currentCount, 1, MPI_INT, i, MPI_COMM_WORLD);
+  }
 
+  MPI_Reduce(globalTemp, mersenne, 64, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&localCount, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  n = globalCount;
+
+  
+    clock_t end2 = clock();
+    double time_spent2 = (double)(end2 - end) / CLOCKS_PER_SEC;
+    // Only one core/thread prints the timing
+    if (rank == 0) {
+      printf("time creating mersenne primes %f \n",time_spent2);
+  }
   //output
   // Only one core/thread prints this output
-  for (i=0; i<n; ++i){
-    j=(unsigned long long int)pow(2,mersenne[i])-1;
-    printf("2^(%d)-1 = %llu \n",mersenne[i],j);
+  if (rank == 0){
+    
+    for (i=0; i<n; ++i){
+      j=(unsigned long long int)pow(2,mersenne[i])-1;
+      printf("2^(%d)-1 = %llu \n",mersenne[i],j);
+    }
   }
 
 
@@ -103,9 +167,12 @@ int main ( int argc, char **argv )
 
   }
 
+  MPI_Barrier(MPI_COMM_WORLD);
   // All cores print this.... for openmp pnly one thread needs to print this
-  printf("[%d] prime[%d]=%d sum=$d\n",rank,k-1,prime[k-1],sum);
+  printf("[%d] prime[%d]=%d sum=%d\n",rank,k-1,prime[k-1],sum);
 
+  MPI_Finalize(); 
+  return 0;
 }
 
 bool is_prime(int n){

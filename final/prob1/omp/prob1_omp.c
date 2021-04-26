@@ -8,6 +8,7 @@
 // Job Control File = prob1_omp.batch
 // Additional File  = N/A
 // Results file     = prob1_omp.txt
+// NOTE: Took about 40 mintues to complete... though it is parallelized
 
 # include <stdlib.h>
 # include <stdio.h>
@@ -34,6 +35,7 @@
 
 
 #define MAXPRIME 1000000
+//#define MAXPRIME 100
 #define MAXK MAXPRIME-2
 
 int main ( int argc, char **argv );
@@ -43,7 +45,7 @@ bool quick_is_prime(unsigned long long int j, int *prime, int k);
 
 int main ( int argc, char **argv )
 {
-  int prime[MAXPRIME + 10];
+  int prime[MAXPRIME + 1000];
   int mersenne[64];
   int rank = 0;
 
@@ -82,9 +84,9 @@ int main ( int argc, char **argv )
 
     while ( k<MAXK){
 #pragma omp parallel for shared(multiplier, prime, k, globalN, tempN) private(n) ordered 
-      for (i = 0; i < 10; i++){
+      for (i = 0; i < 1000; i++){
 	n = globalN + (multiplier * i);
-	if (i == 9){
+	if (i == 999){
 	  tempN = n;
 	}
 #pragma omp ordered

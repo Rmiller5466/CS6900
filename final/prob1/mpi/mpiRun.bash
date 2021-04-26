@@ -1,2 +1,2 @@
-./prob1_mpi.bash prob1_mpi
+./prob1_mpi.compile prob1_mpi
 sbatch prob1_mpi.batch
