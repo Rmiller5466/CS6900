@@ -2,9 +2,10 @@
 
 #SBATCH -N 1
 #SBATCH --tasks-per-node=1
-#SBATCH -c 8
-#SBATCH --job-name=finalP2
-#SBATCH --output=finalP2
+#SBATCH -c 16
+#SBATCH --job-name=prob1_omp
+#SBATCH --output=prob1_omp.txt
+#SBATCH --time=60:00
 
 ## First make sure all other modules are not loaded
 module purge

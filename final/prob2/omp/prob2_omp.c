@@ -1,3 +1,14 @@
+// cs6900
+// Final - prob2_omp
+// Ryan Miller
+// w051rem
+// Due 27 April 2021
+// System = bender
+// Compiler syntax = ./prob2_omp.compile prob2_omp
+// Job Control File = prob2_omp.batch
+// Additional File  = N/A
+// Results file     = prob2_omp.txt
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -6,7 +17,7 @@
 #include <unistd.h>
 #include <omp.h>
 
-#define slow 0
+#define slow 1000
 #define eps 0.00000001
 
 int main ( int argc, char **argv );

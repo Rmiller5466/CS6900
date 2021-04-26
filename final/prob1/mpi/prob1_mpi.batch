@@ -2,8 +2,9 @@
 
 #SBATCH -N 2
 #SBATCH --tasks-per-node=16
-#SBATCH --job-name=prob2_mpi
-#SBATCH --output=prob2_mpi.txt
+#SBATCH --job-name=final
+#SBATCH --output=final.txt
+#SBATCH --time=60:00
 
 ## First make sure all other modules are not loaded
 module purge
@@ -11,4 +12,4 @@ module purge
 ## Load the appropriate module
 module load openmpi-2.0/gcc
 
-mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 32  ./prob2.mpi
+mpirun --mca btl_tcp_if_include en0 --mca btl tcp,self -np 32 ./prob1.mpi

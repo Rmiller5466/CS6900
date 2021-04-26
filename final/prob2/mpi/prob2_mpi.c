@@ -1,3 +1,15 @@
+// cs6900
+// Final - prob2_mpi
+// Ryan Miller
+// w051rem
+// Due 27 April 2021
+// System = bender
+// Compiler syntax = ./prob2_mpi.compile prob2_mpi
+// Job Control File = prob2_mpi.batch
+// Additional File  = N/A
+// Results file     = prob2_mpi.txt
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -6,7 +18,7 @@
 #include <unistd.h>
 #include <mpi.h>
 
-#define slow 0
+#define slow 1000
 #define eps 0.00000001
 
 int main ( int argc, char **argv );

@@ -1,3 +1,14 @@
+// cs6900
+// Final - prob1_omp
+// Ryan Miller
+// w051rem
+// Due 27 April 2021
+// System = bender
+// Compiler syntax = ./prob1_omp.compile prob1_omp
+// Job Control File = prob1_omp.batch
+// Additional File  = N/A
+// Results file     = prob1_omp.txt
+
 # include <stdlib.h>
 # include <stdio.h>
 # include <math.h>
@@ -22,7 +33,7 @@
 // and a single thread for openMP.
 
 
-#define MAXPRIME 100
+#define MAXPRIME 1000000
 #define MAXK MAXPRIME-2
 
 int main ( int argc, char **argv );
@@ -32,7 +43,7 @@ bool quick_is_prime(unsigned long long int j, int *prime, int k);
 
 int main ( int argc, char **argv )
 {
-  int prime[MAXPRIME];
+  int prime[MAXPRIME + 10];
   int mersenne[64];
   int rank = 0;
 
@@ -43,37 +54,68 @@ int main ( int argc, char **argv )
   prime[3]=7;
   prime[4]=11;
   prime[5]=13;
-  int k=6;
-  int i;
-  unsigned long long int j;
-
+  
   clock_t begin = clock();
 
   // try to make the below to run in parallel
   // Create prime vector
-  int n=17; // starting prime - skip even and factor of 6
-  while ( k<MAXK){
-    make_prime_vector(n, prime, &k);
-    make_prime_vector(n+2, prime, &k);
-    n=n+6;
-    /* The below many be helpful for debugging only
-    if ((n-17)%10000==0)
-      printf("n=%d k=%d\n",n,k);
-    */
-  }
+  // int globalK = 0;
+  //int numThreads = 0;
+  //omp_set_num_threads(1);
+  //#pragma omp parallel shared(globalK, numThreads) 
+  //{
+    /* numThreads = omp_get_num_threads(); */
+    /* int split = (MAXK / numThreads); */
+    /* int thrdNum = omp_get_thread_num(); */
+    /* int thrdTotal = omp_get_num_threads(); */
+    /* printf("[%d] of [%d]\n", thrdNum, thrdTotal); */
+
+    int i;
+    unsigned long long int j;
+    
+    int n=17; // starting prime - skip even and factor of 6
+    int k=6; //+ omp_get_thread_num() * split; //38 for rank 1, 2 = 70
+    //int myMaxK = k + split; //
+    int multiplier = 6;
+    int globalN = 17;
+    int tempN = 0;
+
+    while ( k<MAXK){
+#pragma omp parallel for shared(multiplier, prime, k, globalN, tempN) private(n) ordered 
+      for (i = 0; i < 10; i++){
+	n = globalN + (multiplier * i);
+	if (i == 9){
+	  tempN = n;
+	}
+#pragma omp ordered
+	{ 
+	  if (k<=MAXK){
+	    make_prime_vector(n , prime, &k);
+	    if (k<=MAXK){
+	      make_prime_vector(n+2, prime, &k);
+	    }	
+	  }
+	}
+      }
+      globalN = tempN;
+    }
 
   clock_t end = clock();
   double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
   // Only one core/thread prints the timing
   printf("time creating prime vector %f \n",time_spent);
+  // starting prime - skip even and factor of 6
 
   //  clock_t end = clock();
   // opmp has get see
   // https://www.openmp.org/spec-html/5.0/openmpsu160.html
   //try to modify to run in parallel
   n=0;
+
+#pragma omp parallel for shared(prime, k, mersenne, n) firstprivate(j) ordered
   for (i=2; i<64; ++i){
     j=(unsigned long long int)pow(2,i)-1;
+#pragma omp ordered
     if(quick_is_prime(j,prime,k)){
       mersenne[n]=i;
       ++n;
