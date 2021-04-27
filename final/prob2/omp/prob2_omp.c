@@ -35,6 +35,7 @@ double xmin, xmax, ymin, ymax;
 
 int main ( int argc, char **argv )
 {
+  
   // Global values
   X3=(r1 + r2 + r3 + r4);
   X2=(r1*r2 + r1*r3 + r1*r4 + r2*r3 + r2*r4 + r3*r4);

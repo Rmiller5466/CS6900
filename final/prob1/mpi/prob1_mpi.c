@@ -34,7 +34,7 @@
 // and a single thread for openMP.
 
 
-#define MAXPRIME 100
+#define MAXPRIME 1000000
 #define MAXK MAXPRIME-2
 
 int main ( int argc, char **argv );
