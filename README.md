@@ -34,3 +34,8 @@ Location where projects being done throughout this class will be stored.
    * Run these with many different inputs and sizes, plot and document the results
    * Automate all 31 runs
 
+5. Project 5 - Solving Sets of Linear Equations
+   * Create an nxn matrix, initialized based on command line arguments
+   * The nxn matrix would be solved for m solutions
+   * Uses gausiean elimination and back substitution to solve the equations
+   * Cyclic partitioning
